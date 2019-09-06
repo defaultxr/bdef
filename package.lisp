@@ -6,6 +6,7 @@
    #:*bdef-dictionary*
    #:all-bdefs
    #:bdef
+   #:bdef-buffer
    #:bdef-metadata
    #:bdef-splits
    #:bdef-free))
