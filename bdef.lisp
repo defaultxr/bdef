@@ -329,7 +329,7 @@ Note that this doesn't include aliases (i.e. bdef keys that point to another key
 (define-bdef-auto-metadata :onsets
     (lambda (bdef)
       (unless (< (frames bdef) 2000)
-        (aubio-onsets bdef))))
+        (splits-from-aubio-onsets bdef))))
 
 (define-bdef-auto-metadata :tempo
     (lambda (bdef)
