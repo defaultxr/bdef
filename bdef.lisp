@@ -15,51 +15,6 @@
   #+windows (uiop:getenv-pathname "TEMP")
   "The path to ffmpeg, or nil if ffmpeg could not be found.")
 
-;;; generics
-
-(defgeneric path (object)
-  (:documentation "Get the path of OBJECT (i.e. if a buffer, typically the path to the file that the buffer was loaded from.)"))
-
-(defmethod path ((bdef bdef))
-  (path (bdef-buffer bdef)))
-
-(defmethod path ((string string))
-  string)
-
-(defmethod path ((pathname pathname))
-  pathname)
-
-(defgeneric duration (object)
-  (:documentation "Get the duration of OBJECT in seconds. Differs from `dur' in that dur is used to get the number of beats.
-
-See also: `dur'"))
-
-(defmethod duration ((bdef bdef))
-  (duration (bdef-buffer bdef)))
-
-;; (export '(duration)) ;; FIX: this gives a symbol conflict for some reason???
-
-(defgeneric frames (object)
-  (:documentation "Get the number of frames (samples) in OBJECT."))
-
-(defmethod frames ((bdef bdef))
-  (frames (bdef-buffer bdef)))
-
-(defgeneric num-channels (object)
-  (:documentation "Get the number of channels of OBJECT."))
-
-(defmethod num-channels ((bdef bdef))
-  (num-channels (bdef-buffer bdef)))
-
-(defgeneric path (object)
-  (:documentation "Get the path to the file of OBJECT, or nil if it was not loaded from a path."))
-
-(defmethod path ((bdef bdef))
-  (path (bdef-buffer bdef)))
-
-(defmethod path ((symbol symbol))
-  (path (bdef-buffer (bdef symbol))))
-
 ;;; file handling
 
 (defun ensure-readable-audio-file (path &key (extensions (list "wav" "aif" "aiff")))
@@ -440,6 +395,7 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
             (error "Invalid arguments for bdef.new: ~s" args)
             (format t "key: ~s; value: ~s; options: ~s~%" key value options)))))
 
+;;; tests?
 ;; (progn
 ;;   (fresh-line)
 ;;   (bdef.new :foo)
@@ -451,6 +407,48 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
 ;;   (bdef.new :name (env (a -1 1 -1) (a 1 1)) :wavetable 1024 :arg2 99)
 ;;   )
 
-(defmethod buffer-dur ((bdef bdef))
-  (buffer-dur (bdef-buffer bdef)))
+;;; generics
+
+(defgeneric path (object)
+  (:documentation "Get the path of OBJECT (i.e. if a buffer, typically the path to the file that the buffer was loaded from.)"))
+
+(defmethod path ((bdef bdef))
+  (path (bdef-buffer bdef)))
+
+(defmethod path ((string string))
+  string)
+
+(defmethod path ((pathname pathname))
+  pathname)
+
+(defgeneric duration (object)
+  (:documentation "Get the duration of OBJECT in seconds. Differs from `dur' in that dur is used to get the number of beats.
+
+See also: `dur'"))
+
+(defmethod duration ((bdef bdef))
+  (duration (bdef-buffer bdef)))
+
+;; (export '(duration)) ;; FIX: this gives a symbol conflict for some reason???
+
+(defgeneric frames (object)
+  (:documentation "Get the number of frames (samples) in OBJECT."))
+
+(defmethod frames ((bdef bdef))
+  (frames (bdef-buffer bdef)))
+
+(defgeneric num-channels (object)
+  (:documentation "Get the number of channels of OBJECT."))
+
+(defmethod num-channels ((bdef bdef))
+  (num-channels (bdef-buffer bdef)))
+
+(defgeneric path (object)
+  (:documentation "Get the path to the file of OBJECT, or nil if it was not loaded from a path."))
+
+(defmethod path ((bdef bdef))
+  (path (bdef-buffer bdef)))
+
+(defmethod path ((symbol symbol))
+  (path (bdef-buffer (bdef symbol))))
 
