@@ -1,0 +1,107 @@
+#+TITLE: bdef
+
+"Buffer definition"; abstraction of audio buffers for Lisp sound synthesis systems.
+
+Basically, this simplifies buffer management in [[https://github.com/byulparan/cl-collider][cl-collider]], making them easier to use.
+
+*Note:* Previously at the URL for this repository was Bdef for SuperCollider. That repository has since moved [[https://github.com/defaultxr/supercollider-bdef][here]].
+
+* Features
+
+** Can be re-evaluated without loading a new buffer; compare:
+
+#+BEGIN_SRC lisp
+  (defparameter *buf* (cl-collider:buffer-read "/buffer.wav"))
+
+  (defparameter *buf* (cl-collider:buffer-read "/buffer.wav")) ;; the same variable, and same file!
+
+  (length (remove-if #'null (slot-value *s* 'cl-collider::buffers))) ;; => 2 -- duplicate buffers!
+#+END_SRC
+
+versus:
+
+#+BEGIN_SRC lisp
+  (bdef :buf "/buffer.wav") ;; here we give it the name :buf
+
+  (bdef :foo "/buffer.wav") ;; same file, different "name"...
+
+  (length (remove-if #'null (slot-value *s* 'cl-collider::buffers))) ;; => 1 -- no duplicate buffers :D
+#+END_SRC
+
+...To force a file to be reloaded, simply call ~bdef-free~ on it, then call ~bdef~ again.
+
+** Automatically converts files unsupported by SuperCollider if you have ffmpeg installed:
+
+#+BEGIN_SRC lisp
+(bdef :bar "/blah.mp3") ;; works!
+#+END_SRC
+
+It does this by storing them in a temporary directory.
+
+** No additional name needed if loading from a file:
+
+#+BEGIN_SRC lisp
+(bdef "/my-file.ogg")
+#+END_SRC
+
+** Supports pathname abbreviations:
+
+#+BEGIN_SRC lisp
+(bdef "~/cool-sound.wav") ;; will find a cool sound in your home directory
+#+END_SRC
+
+** Works with cl-collider methods:
+
+#+BEGIN_SRC lisp
+(cl-collider:bufnum (bdef :sound))
+#+END_SRC
+
+Load the ~bdef/cl-collider~ system to enable this.
+
+** Works with cl-patterns methods:
+
+#+BEGIN_SRC lisp
+(cl-patterns:play (bdef :sound))
+
+(cl-patterns:play (cl-patterns:event :instrument :playbuf :bufnum (bdef :sound)))
+#+END_SRC
+
+Load the ~bdef/cl-patterns~ system to enable this.
+
+** Allows metadata about the buffer to be stored:
+
+#+BEGIN_SRC lisp
+(bdef-metadata (bdef :snd) :bpm) ;; get the BPM of the file
+#+END_SRC
+
+** Automatically gets various metadata for a file when available:
+
+#+BEGIN_SRC lisp
+(bdef-metadata (bdef "~/my-file-128bpm.wav") :bpm) ;; => 128
+#+END_SRC
+
+You can also define your own auto-metadata keys with ~define-bdef-auto-metadata~ or remove the defaults by altering ~*bdef-auto-metadata-list*~.
+
+/Caveat:/ additional metadata is loaded asynchronously in additional threads, so it may not be available immediately when the buffer is loaded. This will be made optional in the future.
+
+** "Splits" functionality to define split points or regions in buffers:
+
+#+BEGIN_SRC lisp
+(make-splits (list 0 0.25 0.5 0.75) :bdef (bdef :foo)) ;; splits at the start, 25%, 50%, and 75% into the file
+
+(splits-from-audacity-labels "/path/to/label.txt") ;; make a splits object from an Audacity labels file
+#+END_SRC
+
+** Integration with the [[https://aubio.org/][Aubio]] audio analysis library if installed:
+
+#+BEGIN_SRC lisp
+(splits-from-aubio-onsets "/path/to/audio/file.wav")
+
+(bdef "/path/to/pee.wav") ;; automatically finds the BPM with aubio, storing it in the :bpm bdef metadata.
+#+END_SRC
+
+* Future
+
+- Right now, ~cl-collider~ is required, and is the only backend supported. In the future, ~bdef~ should be usable with [[http://incudine.sourceforge.net/][Incudine]] as well.
+- Support for configurable pathname shortcuts. (i.e. set ~foo~ as a shortcut to ~/a/long/path/name/~, then provide ~"foo/bar.wav"~ instead of ~"/a/long/path/name/bar.wav"~.)
+- Test to make sure the ~#+windows~ stuff works. (:
