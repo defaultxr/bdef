@@ -54,7 +54,7 @@
         (point-type (slot-value splits 'point-type)))
     (if (string= (symbol-name type) (symbol-name point-type))
         'identity
-        (intern (concatenate 'string (symbol-name point-type) "-" (symbol-name type))))))
+        (intern (concatenate 'string (symbol-name point-type) "-" (symbol-name type)) 'bdef))))
 
 (defun %splits-conversion-function (splits type)
   "Get a function that can be used to convert SPLITS' type into the split type specified by TYPE."
@@ -63,7 +63,7 @@
          (conv-func-total (case conv-func
                             ((percents-samples samples-percents samples-seconds) (frames bdef))
                             ((percents-seconds seconds-percents seconds-samples) (duration bdef)))))
-    (if (eq 'identity conv-func)
+    (if (eql 'identity conv-func)
         'identity
         (lambda (x) (funcall conv-func x conv-func-total)))))
 
