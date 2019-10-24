@@ -166,7 +166,7 @@
 (defclass bdef ()
   ((key :initarg :key :reader bdef-key :type symbol :documentation "The name given to the bdef.")
    (buffer :initarg :buffer :reader bdef-buffer :documentation "The actual buffer object that the bdef refers to.")
-   (metadata :initarg :metadata :documentation "Hash table of additional data associated with the bdef, accessible with the `bdef-metadata' function.")))
+   (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the bdef, accessible with the `bdef-metadata' function.")))
 
 (defmethod print-object ((bdef bdef) stream)
   (with-slots (key buffer) bdef
@@ -174,15 +174,15 @@
         (format stream "(~s ~s)" 'bdef key)
         (format stream "#<~s>" 'bdef))))
 
-(defmethod describe-object ((bdef bdef) stream) ;; FIX
+(defmethod describe-object ((bdef bdef) stream)
   (with-slots (key buffer metadata) bdef
     (format stream "~s is a ~s.~%  It is ~s seconds long (~s frames), with ~s channels.~%" bdef 'bdef (duration bdef) (frames bdef) (num-channels bdef))
     (format stream "~@[  It contains the audio from the file ~s.~%~]" (path bdef))
     (format stream "  Keys that point to this buffer are: ~s~%" (bdef-keys-pointing-to bdef))
-    (alexandria:when-let ((meta (bdef-metadata bdef)))
+    (alexandria:when-let ((meta-keys (bdef-metadata-keys bdef)))
       (format stream "  It has the following metadata:~%")
-      (loop :for (key val) :on meta :by #'cddr
-         :do (format stream "    ~s -> ~s~%" key val)))))
+      (loop :for key :in meta-keys
+         :do (format stream "    ~s -> ~s~%" key (bdef-metadata bdef key)))))) ;; FIX: use format's indentation directive?
 
 (defvar *bdef-dictionary* (make-hash-table :test #'equal)
   "The global dictionary of bdefs.")
@@ -228,31 +228,32 @@ Note that this doesn't include aliases (i.e. bdef keys that point to another key
         (bdef-get result dictionary)
         result)))
 
-(defun bdef-metadata (bdef &optional key)
-  "Get BDEF's metadata for KEY."
-  (let ((bdef (bdef bdef)))
-    (if key
-        (getf (slot-value bdef 'metadata) key)
-        (slot-value bdef 'metadata))))
+(defun bdef-metadata (bdef key)
+  "Get the value of BDEF's metadata for KEY. Returns true as a second value if the metadata had an entry for KEY, or false if it did not.
 
-(defsetf bdef-metadata (bdef &optional (key nil key-provided-p)) (value) ;; FIX: automatically set any splits objects' BDEF slot to point to this bdef.
-  (let ((bdef-sym (gensym))
-        (plist-sym (gensym))
-        (key-sym (gensym))
-        (value-sym (gensym)))
-    `(let ((,bdef-sym ,bdef)
-           (,value-sym ,value))
-       (if ,key-provided-p
-           (let ((,plist-sym (bdef-metadata ,bdef-sym))
-                 (,key-sym ,key))
-             (when (and (typep ,value-sym 'splits)
-                        (null (splits-bdef ,value-sym)))
-               (setf (splits-bdef ,value-sym) ,bdef-sym))
-             (setf (slot-value ,bdef-sym 'metadata) (cl-patterns::plist-set ,plist-sym ,key-sym ,value-sym))
-             ,value-sym)
-           (progn
-             (setf (slot-value ,bdef-sym 'metadata) ,value-sym)
-             ,value-sym)))))
+Note that this function will block if the specified metadata is one of the `*auto-metadata*' that hasn't finished being generated yet."
+  (let ((bdef (ensure-bdef bdef)))
+    (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
+      (values
+       (if val
+           (if (typep val 'eager-future2:future)
+               (setf (bdef-metadata bdef key) (eager-future2:yield val))
+               val)
+           val)
+       present-p))))
+
+(defun (setf bdef-metadata) (value bdef key)
+  ;; if VALUE is a splits object and its `splits-bdef' is nil, set it to point to this bdef.
+  (let ((bdef (ensure-bdef bdef)))
+    (alexandria:when-let ((type-sym (ignore-errors (find-symbol "SPLITS" 'bdef))))
+      (when (and (typep value type-sym)
+                 (null (funcall 'splits-bdef value)))
+        (setf (splits-bdef value) bdef)))
+    (setf (gethash key (slot-value bdef 'metadata)) value)))
+
+(defun bdef-metadata-keys (bdef)
+  "Get a list of all keys in BDEF's metadata."
+  (alexandria:hash-table-keys (slot-value (ensure-bdef bdef) 'metadata)))
 
 (defun bdef-splits (bdef)
   "Get any `splits' from BDEF's metadata, searching in preferred order (i.e. :splits key first, etc)."
@@ -328,32 +329,39 @@ Note that this doesn't include aliases (i.e. bdef keys that point to another key
 
 ;;; auto-metadata
 
-(defvar *bdef-auto-metadata-list* nil
-  "A plist of keys that will automatically be populated in a bdef's metadata for all newly-created or loaded buffers. The value for each key is the function that generates the value of the key for the bdef metadata.")
+(defvar *auto-metadata* (list)
+  "Plist of keys that will automatically be populated in a bdef's metadata for all newly-created or loaded buffers. The value for each key is the function that generates the value of the key for the bdef metadata. Use the `define-auto-metadata' macro or `set-auto-metadata' function to define auto-metadata keys, or `remove-auto-metadata' to remove them.")
 
-(defun define-bdef-auto-metadata (key function) ;; FIX: make into a macro instead?
-  (setf (getf *bdef-auto-metadata-list* key) function))
+(defun set-auto-metadata (key function)
+  "Add KEY as an auto-metadata key for bdefs. FUNCTION will be run with the bdef as its argument, and the result will be set to the bdef's metadata for KEY."
+  (setf (getf *auto-metadata* key) function))
 
-(define-bdef-auto-metadata :onsets
-    (lambda (bdef)
-      (unless (< (frames bdef) 2000)
-        (splits-from-aubio-onsets bdef))))
+(defmacro define-auto-metadata (key &body body)
+  "Define an auto-metadata key for bdefs. The variable BDEF will be bound in BODY to the bdef in question."
+  `(setf (getf *auto-metadata* ,key)
+         (lambda (bdef) ,@body)))
 
-(define-bdef-auto-metadata :tempo
-    (lambda (bdef)
-      (let* ((path (path bdef))
-             (bpm (or
-                   (extract-bpm-from-string path)
-                   (extract-bpm-from-file-metadata path)
-                   (bpm-tools-bpm path))))
-        (when bpm
-          (/ bpm 60)))))
+(defun remove-auto-metadata (key)
+  "Remove a previously-defined auto-metadata key."
+  (alexandria:remove-from-plistf *auto-metadata* key))
 
-;; (define-bdef-auto-metadata :dur (lambda (bdef)
-;;                              (loop :until (bdef-metadata bdef :tempo)
-;;                                 :do (sleep 0.1))
-;;                              ;; FIX
-;;                              ))
+(define-auto-metadata :onsets
+  (unless (< (duration bdef) 1)
+    (splits-from-aubio-onsets bdef)))
+
+(define-auto-metadata :tempo
+  (let* ((path (path bdef))
+         (bpm (or
+               (extract-bpm-from-string path)
+               (extract-bpm-from-file-metadata path)
+               (bpm-tools-bpm path))))
+    (when bpm
+      (/ bpm 60))))
+
+(define-auto-metadata :dur
+  (when (bdef-metadata bdef :tempo)
+    (round (* (bdef-metadata bdef :tempo)
+              (duration bdef)))))
 
 ;; FIX: add 'metadata' key. it should probably add to the default metadata fields. if the user doesn't want them, they can provide 'nil' for the key they don't want generated.
 (defun bdef (key &optional (value nil value-provided-p) &key (num-channels 2) (wavetable nil) (start-frame 0) metadata) ;; FIX: start-frame key doesn't work yet

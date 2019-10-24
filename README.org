@@ -71,18 +71,18 @@ Load the ~bdef/cl-patterns~ system to enable this.
 ** Allows metadata about the buffer to be stored:
 
 #+BEGIN_SRC lisp
-(bdef-metadata (bdef :snd) :bpm) ;; get the BPM of the file
+(bdef-metadata (bdef :snd) :tempo) ;; get the tempo of the file in beats per second
 #+END_SRC
 
 ** Automatically gets various metadata for a file when available:
 
 #+BEGIN_SRC lisp
-(bdef-metadata (bdef "~/my-file-128bpm.wav") :bpm) ;; => 128
+(bdef-metadata (bdef "~/my-file-128bpm.wav") :tempo) ;; => 32/15 (128bpm in beats per second)
 #+END_SRC
 
-You can also define your own auto-metadata keys with ~define-bdef-auto-metadata~ or remove the defaults by altering ~*bdef-auto-metadata-list*~.
+You can also add your own auto-metadata keys with the ~define-auto-metadata~ macro or ~set-auto-metadata~ function, or remove them with the ~remove-auto-metadata~ function.
 
-/Caveat:/ additional metadata is loaded asynchronously in additional threads, so it may not be available immediately when the buffer is loaded. This will be made optional in the future.
+Additional metadata is loaded asynchronously in background threads using futures from the [[https://common-lisp.net/project/eager-future/][eager-future2]] library. If a requested metadatum is still being generated, ~bdef-metadata~ will block until the result is available.
 
 ** "Splits" functionality to define split points or regions in buffers:
 

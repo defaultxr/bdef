@@ -10,8 +10,11 @@
    #:bdef-metadata
    #:bdef-metadata-keys
    #:bdef-splits
-   #:bdef-free))
    #:bdef-free
+
+   #:define-auto-metadata
+   #:set-auto-metadata
+   #:remove-auto-metadata
 
    #:splits
    #:make-splits
