@@ -11,7 +11,6 @@
    (comments :initarg :comments :initform nil :type (or null (vector (or null string))) :documentation "The vector of comments for each split point.")
    (point-type :initarg :point-type :initform :percents :accessor splits-point-type :type symbol :documentation "Whether the splits are indexed by percents (i.e. 0.5 is in the middle of the buffer), samples, or seconds.")
    (bdef :initarg :bdef :initform nil :accessor splits-bdef :type (or null bdef) :documentation "The bdef object that this splits references (i.e. for information like duration, sample rate, etc, for converting point data).")
-   ;; (buffer-dur :initarg :buffer-dur :initform nil :accessor splits-buffer-dur :type (or null number) :documentation "The duration, in seconds, of the buffer.")
    (metadata :initarg :metadata :initform nil :accessor splits-metadata :documentation "Any additional metadata for the splits object."))
   (:documentation "List of split data for dividing buffers into pieces."))
 
@@ -67,8 +66,13 @@
         'identity
         (lambda (x) (funcall conv-func x conv-func-total)))))
 
-(defun splits-length (splits)
-  (length (slot-value splits 'starts)))
+(defun splits-length (object)
+  "Get the number of splits defined in OBJECT."
+  (etypecase object
+    (splits
+     (length (slot-value object 'starts)))
+    (bdef
+     (splits-length (bdef-splits object)))))
 
 #+sbcl
 (defmethod sequence:length ((this splits))
@@ -102,12 +106,14 @@
 
 (defun splits-point (splits split &optional (point :start) (type :percent))
   "Get the split point SPLIT from SPLITS, converting to the correct TYPE (percent, samples, seconds)."
-  (assert (typep splits 'splits) (splits))
   (assert (integerp split) (split))
   (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
   (assert (member type (list :percent :sample :frame :second :percents :samples :frames :seconds)) (type))
-  (let ((array (slot-value splits (%splits-ensure-point-type point)))
-        (conv-func (%splits-conversion-function splits type)))
+  (let* ((splits (if (typep splits 'bdef)
+                     (bdef-splits splits)
+                     splits))
+         (array (slot-value splits (%splits-ensure-point-type point)))
+         (conv-func (%splits-conversion-function splits type)))
     (when (null array)
       (return-from splits-point nil))
     (if (eq 'identity conv-func)
@@ -120,23 +126,7 @@
   (case type
     ((:percent :percents) 1.0)
     ((:sample :frame :samples :frames) (frames bdef))
-    ((:second :seconds) (buffer-dur bdef))))
-
-(defun splits-event (splits split &key end-split (type :percent))
-  "Get an event for a `splits' split."
-  (flet ((ensure-end (end-split type)
-           (or (splits-point splits end-split :end type)
-               (let ((ns (1+ end-split)))
-                 (when (< ns (splits-length splits))
-                   (splits-point splits (1+ end-split) :start type)))
-               (bdef-end-point (splits-bdef splits) type))))
-    (let* ((end-split (or end-split split))
-           (start (splits-point splits split :start type))
-           (end (ensure-end end-split type)))
-      (event :start start :end end
-             :dur (time-dur (abs (- (ensure-end end-split :seconds)
-                                    (splits-point splits split :start :seconds)))
-                            (event-value *event* :tempo))))))
+    ((:second :seconds) (duration bdef))))
 
 (defun percents-samples (percent total-samples)
   (round (* percent total-samples)))

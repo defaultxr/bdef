@@ -8,8 +8,8 @@
   :serial t
   :depends-on (#:alexandria
                #:parse-float
-               #:cl-collider
-               #:bordeaux-threads ;; FIX: make this optional
+               #:cl-collider ;; FIX: make bdef backend-agnostic
+               #:eager-future2
                )
   :components ((:file "package")
                (:file "bdef")

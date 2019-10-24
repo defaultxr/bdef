@@ -1,4 +1,6 @@
 ;;;; bdef.lisp
+;; FIX: use uiop:with-temporary-file to generate temporary files?
+;; FIX: allow a sound to be loaded as a wavetable and a normal sound at the same time
 
 (in-package #:bdef)
 
@@ -59,7 +61,7 @@
          (newline (position #\newline ffmpeg-data :start stream-line-pos))
          (mono-p (search "mono," (subseq ffmpeg-data stream-line-pos newline))))
     (when (/= 0 start-frame)
-      (warn "Loading sounds with a start frame is not yet supported.")) ;; FIX
+      (error "Loading sounds with a start frame is not yet supported.")) ;; FIX
     (if wavetable
         (cl-collider:buffer-read-as-wavetable path)
         (cl-collider:buffer-read-channel path
@@ -162,12 +164,12 @@
 ;;; bdef
 
 (defclass bdef ()
-  ((key :initarg :key :reader bdef-key)
-   (buffer :initarg :buffer :reader bdef-buffer)
-   (metadata :initarg :metadata)))
+  ((key :initarg :key :reader bdef-key :type symbol :documentation "The name given to the bdef.")
+   (buffer :initarg :buffer :reader bdef-buffer :documentation "The actual buffer object that the bdef refers to.")
+   (metadata :initarg :metadata :documentation "Hash table of additional data associated with the bdef, accessible with the `bdef-metadata' function.")))
 
 (defmethod print-object ((bdef bdef) stream)
-  (with-slots (key buffer metadata) bdef
+  (with-slots (key buffer) bdef
     (if (slot-boundp bdef 'key)
         (format stream "(~s ~s)" 'bdef key)
         (format stream "#<~s>" 'bdef))))
@@ -254,10 +256,11 @@ Note that this doesn't include aliases (i.e. bdef keys that point to another key
 
 (defun bdef-splits (bdef)
   "Get any `splits' from BDEF's metadata, searching in preferred order (i.e. :splits key first, etc)."
-  (or (bdef-metadata bdef :splits)
-      (bdef-metadata bdef :onsets)
-      ;; FIX: search the rest of the keys/values
-      ))
+  (let ((bdef (ensure-bdef bdef)))
+    (loop :for key :in (list :splits :onsets) ;; FIX: check other keys too?
+       :for val = (bdef-metadata bdef key)
+       :if val
+       :return val)))
 
 (defun bdef-keys-pointing-to (bdef &optional (dictionary *bdef-dictionary*))
   "Get a list of all the keys in `*bdef-dictionary*' that point to this bdef."
@@ -285,38 +288,43 @@ Note that this doesn't include aliases (i.e. bdef keys that point to another key
 
 (defun bdef-load (object &key (num-channels 2) (wavetable nil) (start-frame 0))
   "Load an object into a bdef, inserting the relevant keys into the bdef dictionary."
-  (etypecase object
-    (sc::env ;; FIX: we shouldn't assume that the user always wants an env to be a wavetable...
-     (let* ((wavetable (or wavetable 512)) ;; FIX: if WAVETABLE is t...
-            (buffer (buffer-alloc (* 2 wavetable) :chanls num-channels))
-            (bdef (make-instance 'bdef
-                                 :key object
-                                 :buffer buffer
-                                 :metadata (list
-                                            :env object))))
-       (buffer-setn buffer (list-in-wavetable-format (env-as-signal object wavetable)))
-       bdef))
-    (string
-     (let* ((file (bdef-key-cleanse object))
-            (buffer (buffer-read-any file :num-channels num-channels :wavetable wavetable :start-frame start-frame))
-            (bdef (make-instance 'bdef
-                                 :key file
-                                 :buffer buffer
-                                 :metadata (list))))
-       (bdef-set file bdef)
-       (loop :for (key function) :on *bdef-auto-metadata-list* :by #'cddr
-          :do (bt:make-thread
-               (lambda ()
-                 (setf (bdef-metadata bdef key) (funcall function bdef)))))
-       bdef))
-    (list ;; FIX: this needs to work properly when :wavetable is t
-     (let* ((buffer (buffer-alloc (length object)))
-            (bdef (make-instance 'bdef
-                                 :key object
-                                 :buffer buffer
-                                 :metadata (list))))
-       (buffer-setn buffer object)
-       bdef))))
+  (let ((bdef
+         (etypecase object
+           (sc::env ;; FIX: we shouldn't assume that the user always wants an env to be a wavetable...
+            (let* ((wavetable (or wavetable 512)) ;; FIX: if WAVETABLE is t...
+                   (buffer (cl-collider:buffer-alloc (* 2 wavetable) :chanls num-channels))
+                   (bdef (make-instance 'bdef
+                                        :key object
+                                        :buffer buffer)))
+              (setf (bdef-metadata bdef :env) object)
+              (cl-collider:buffer-setn buffer (cl-collider::list-in-wavetable-format (cl-collider::env-as-signal object wavetable)))
+              bdef))
+           (string
+            (let* ((file (bdef-key-cleanse object))
+                   (buffer (buffer-read-any file :num-channels num-channels :wavetable wavetable :start-frame start-frame))
+                   (bdef (make-instance 'bdef
+                                        :key file
+                                        :buffer buffer)))
+              (bdef-set file bdef)
+              (alexandria:doplist (key function *auto-metadata*)
+                  (let ((k key)
+                        (f function))
+                    (setf (bdef-metadata bdef key)
+                          (eager-future2:pcall
+                           (lambda ()
+                             (let ((value (funcall f bdef)))
+                               (setf (bdef-metadata bdef k) value)
+                               value))))))
+              bdef))
+           (list ;; FIX: this needs to work properly when :wavetable is t
+            (let* ((buffer (cl-collider:buffer-alloc (length object)))
+                   (bdef (make-instance 'bdef
+                                        :key object
+                                        :buffer buffer)))
+              (cl-collider:buffer-setn buffer object)
+              bdef)))))
+    (setf (bdef-metadata bdef :wavetable) (and wavetable t))
+    bdef))
 
 ;;; auto-metadata
 
@@ -358,16 +366,14 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
           "Cannot use a string as a key.")
   (when (typep key 'bdef)
     (return-from bdef key))
-  ;; (when (/= 0 start-frame) ;; needs to be fixed in `buffer-read-any'
-  ;;   (warn "bdef cannot yet load sounds with a start-frame."))
   (let ((key (bdef-key-cleanse key))
         (value (bdef-key-cleanse value)))
     (if value-provided-p
         (let ((res (bdef-set key (if (bdef-get value)
                                      value
                                      (bdef-load value :num-channels num-channels :wavetable wavetable :start-frame start-frame)))))
-          (loop :for (key value) :on metadata :by #'cddr
-             :do (setf (bdef-metadata res key) value))
+          (alexandria:doplist (key value metadata)
+              (setf (bdef-metadata res key) value))
           res)
         (or (bdef-get key)
             (if (symbolp key)
@@ -409,27 +415,14 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
 
 ;;; generics
 
-(defgeneric path (object)
-  (:documentation "Get the path of OBJECT (i.e. if a buffer, typically the path to the file that the buffer was loaded from.)"))
+(defgeneric id (object)
+  (:documentation "Get the ID number of OBJECT."))
 
-(defmethod path ((bdef bdef))
-  (path (bdef-buffer bdef)))
+(defmethod id ((bdef bdef))
+  (id (bdef-buffer bdef)))
 
-(defmethod path ((string string))
-  string)
-
-(defmethod path ((pathname pathname))
-  pathname)
-
-(defgeneric duration (object)
-  (:documentation "Get the duration of OBJECT in seconds. Differs from `dur' in that dur is used to get the number of beats.
-
-See also: `dur'"))
-
-(defmethod duration ((bdef bdef))
-  (duration (bdef-buffer bdef)))
-
-;; (export '(duration)) ;; FIX: this gives a symbol conflict for some reason???
+(defmethod id ((symbol symbol))
+  (id (bdef symbol)))
 
 (defgeneric frames (object)
   (:documentation "Get the number of frames (samples) in OBJECT."))
@@ -444,11 +437,23 @@ See also: `dur'"))
   (num-channels (bdef-buffer bdef)))
 
 (defgeneric path (object)
-  (:documentation "Get the path to the file of OBJECT, or nil if it was not loaded from a path."))
+  (:documentation "Get the path of OBJECT's file, or nil if it was not loaded from a file."))
 
 (defmethod path ((bdef bdef))
   (path (bdef-buffer bdef)))
 
 (defmethod path ((symbol symbol))
-  (path (bdef-buffer (bdef symbol))))
+  (path (bdef symbol)))
+
+(defmethod path ((string string))
+  string)
+
+(defmethod path ((pathname pathname))
+  pathname)
+
+(defgeneric duration (object)
+  (:documentation "Get the duration of OBJECT in seconds."))
+
+(defmethod duration ((bdef bdef))
+  (duration (bdef-buffer bdef)))
 
