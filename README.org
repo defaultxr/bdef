@@ -8,7 +8,9 @@ Basically, this simplifies buffer management in [[https://github.com/byulparan/c
 
 * Features
 
-** Can be re-evaluated without loading a new buffer; compare:
+** Can be re-evaluated without loading a new buffer:
+
+Compare:
 
 #+BEGIN_SRC lisp
   (defparameter *buf* (cl-collider:buffer-read "/buffer.wav"))
@@ -50,20 +52,36 @@ It does this by storing them in a temporary directory.
 (bdef "~/cool-sound.wav") ;; will find a cool sound in your home directory
 #+END_SRC
 
-** Works with cl-collider methods:
+** Loads mono files as stereo by default.
+
+For consistency. To load as mono, supply 1 for ~bdef~'s ~num-channels~ keyword argument.
+
+** Supports loading in wavetable format:
 
 #+BEGIN_SRC lisp
-(cl-collider:bufnum (bdef :sound))
+(bdef "~/wilhelm.wav" :wavetable t) ;; load the Wilhelm scream as a wavetable
+#+END_SRC
+
+** Supports loading envelopes as buffers:
+
+Either as wavetables, or standard.
+
+** Integration with [[https://github.com/byulparan/cl-collider][cl-collider]]:
+
+#+BEGIN_SRC lisp
+(cl-collider:bufnum (bdef :sound)) ;; returns the buffer number.
+
+(cl-collider:synth :playbuf :bufnum (bdef :sound)) ;; plays the buffer.
 #+END_SRC
 
 Load the ~bdef/cl-collider~ system to enable this.
 
-** Works with cl-patterns methods:
+** Integration with [[https://github.com/defaultxr/cl-patterns][cl-patterns]]:
 
 #+BEGIN_SRC lisp
-(cl-patterns:play (bdef :sound))
+(cl-patterns:play (bdef :sound)) ;; plays the buffer using the *cl-collider-buffer-preview-synth* set in cl-patterns.
 
-(cl-patterns:play (cl-patterns:event :instrument :playbuf :bufnum (bdef :sound)))
+(cl-patterns:play (cl-patterns:event :instrument :playbuf :bufnum (bdef :sound))) ;; automatically converts bdef to the buffer number.
 #+END_SRC
 
 Load the ~bdef/cl-patterns~ system to enable this.
@@ -97,7 +115,9 @@ Additional metadata is loaded asynchronously in background threads using futures
 #+BEGIN_SRC lisp
 (splits-from-aubio-onsets "/path/to/audio/file.wav")
 
-(bdef "/path/to/pee.wav") ;; automatically finds the BPM with aubio, storing it in the :bpm bdef metadata.
+(bdef :pee "/path/to/pee.wav") ;; since no BPM is listed in the filename, aubio is used to detect it...
+
+(bdef-metadata :pee :tempo) ;; ...and it is stored in the bdef's :tempo metadatum! nice!
 #+END_SRC
 
 * Future
