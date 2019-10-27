@@ -263,6 +263,9 @@ Note that this function will block if the specified metadata is one of the `*aut
        :if val
        :return val)))
 
+(defun (setf bdef-splits) (splits bdef)
+  (setf (bdef-metadata (ensure-bdef bdef) :splits) splits))
+
 (defun bdef-keys-pointing-to (bdef &optional (dictionary *bdef-dictionary*))
   "Get a list of all the keys in `*bdef-dictionary*' that point to this bdef."
   (alexandria:when-let ((bdef (ensure-bdef bdef)))
