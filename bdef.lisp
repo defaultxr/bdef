@@ -274,6 +274,9 @@ Note that this function will block if the specified metadata is one of the `*aut
        :if (eq value bdef)
        :collect key)))
 
+(defmethod bdef-buffer ((symbol symbol))
+  (bdef-buffer (ensure-bdef symbol)))
+
 (defun bdef-free (bdef &optional (dictionary *bdef-dictionary*))
   "Free a buffer from the bdef dictionary, removing all keys that point to it."
   (etypecase bdef
