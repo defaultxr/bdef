@@ -8,6 +8,7 @@
   :serial t
   :depends-on (#:alexandria
                #:parse-float
+               #:split-sequence
                #:cl-collider ;; FIX: make bdef backend-agnostic
                #:eager-future2
                )
