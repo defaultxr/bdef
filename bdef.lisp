@@ -12,33 +12,33 @@
   #+windows (concatenate 'string (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/")
   "The directory bdef should store its temporary files in (i.e. the .wav files generated from format auto-conversion).")
 
-(defparameter *ffmpeg-path* ;; FIX: actually use this...
-  #+(or linux darwin) (ignore-errors (uiop:run-program "which ffmpeg"))
+(defparameter *ffmpeg-path*
+  #+(or linux darwin) (ignore-errors (uiop:run-program "which ffmpeg" :output (list :string :stripped t)))
   #+windows (uiop:getenv-pathname "TEMP")
   "The path to ffmpeg, or nil if ffmpeg could not be found.")
 
 ;;; file handling
 
 (defun ensure-readable-audio-file (path &key (extensions (list "wav" "aif" "aiff")))
-  "If PATH ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to wav."
+  "If PATH ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS. The converted file is stored in `*bdef-temporary-directory*'."
   (let* ((path (namestring (truename path)))
          (ext-pos (position #\. path :from-end t)))
     (if (position (string-downcase (subseq path (1+ ext-pos))) extensions :test #'equal)
         path
-        (let ((output-filename (concatenate 'string *bdef-temporary-directory* (file-namestring (subseq path 0 ext-pos)) ".wav")))
+        (let ((output-filename (concatenate 'string *bdef-temporary-directory* (file-namestring (subseq path 0 ext-pos)) "." (car extensions))))
           (if (probe-file output-filename)
               output-filename
               (progn
                 (ensure-directories-exist *bdef-temporary-directory*)
-                (uiop:run-program (list "ffmpeg" "-i" path output-filename) ;; FIX: cache this output and parse it for bdef metadata
+                (uiop:run-program (list *ffmpeg-path* "-i" path output-filename) ;; FIX: cache this output and parse it for bdef metadata
                                   ;; :output '(:string :stripped t))
                                   )
                 output-filename))))))
 
 ;; FIX: consider using easy-audio to get audio file metadata instead?
 (defun ffmpeg-data (file)
-  "Get the ffmpeg output for FILE.."
-  (nth-value 1 (uiop:run-program (list "ffmpeg" "-i" (namestring (truename file))) :error-output '(:string :stripped t) :ignore-error-status t)))
+  "Get the ffmpeg output for FILE."
+  (nth-value 1 (uiop:run-program (list *ffmpeg-path* "-i" (namestring (truename file))) :error-output '(:string :stripped t) :ignore-error-status t)))
 
 (defun ffmpeg-metadata (file)
   "Get the metadata for a file from ffmpeg's output."
