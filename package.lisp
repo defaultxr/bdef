@@ -3,6 +3,7 @@
 (defpackage #:bdef
   (:use #:cl)
   (:export
+   #:*bdef-temporary-directory*
    #:*bdef-dictionary*
    #:all-bdefs
    #:bdef
