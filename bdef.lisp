@@ -80,87 +80,6 @@
                                          :bufnum bufnum
                                          :server server))))
 
-;;; wavetable shiz
-;; https://github.com/supercollider/supercollider/blob/772bdd6946a7253390ba0b1b23eb3adc0acb97ea/common/Samp.cpp#L29
-
-;; (defparameter buf (buffer-read #P"~/misc/sounds/ssw/inspektor/Single Cycle in C/AKWF_0001/AKWF_0001.wav"))
-
-;; (defparameter buf (buffer-read-as-wavetable #P"~/misc/sounds/ssw/inspektor/Single Cycle in C/AKWF_0001/AKWF_0001.wav"))
-
-;; | server=(Server.default) path action numChannels=1 size |
-;; var sf, fa, po2;
-;; sf = SoundFile.new;
-;; sf.openRead(path);
-;; fa = FloatArray.newClear(sf.numFrames);
-;; sf.readData(fa);
-;; sf.close;
-;; po2 = (2**(1..15));
-;; size = (size ? sf.numFrames);
-;; if(po2.includes(size).not, {
-;; 	var index = (po2.indexOfGreaterThan(size) ? 10);
-;; 	"Rounding wavetable buffer size to the nearest power of 2.".warn;
-;; 	size = po2[index.clip(0, 14)];
-;; });
-;; if(size != sf.numFrames, {
-;; 	fa = fa.resamp1(size);
-;; });
-;; fa = fa.as(Signal).asWavetable;
-;; ^Buffer.loadCollection(server, fa, numChannels ? 1, action);
-
-;; (defun buffer-read-as-wavetable (path)
-;;   (let* ((tmp-buf (prog1 (buffer-read path)
-;;                     (sync)))
-;;          (file-frames (slot-value tmp-buf 'sc::frames))
-;;          (powers-of-two (mapcar (lambda (x) (expt 2 (1+ x))) (alexandria:iota 16)))
-;;          (num-frames (nth (position-if (lambda (x) (>= x file-frames)) powers-of-two) powers-of-two))
-;;          (frames (prog1
-;;                      (buffer-get-to-list tmp-buf)
-;;                    (buffer-free tmp-buf)))
-;;          (buffer (buffer-alloc (* 2 num-frames))))
-;;     (buffer-set-list buffer (list-in-wavetable-format (linear-resample frames num-frames)))
-;;     buffer))
-
-;; (defun buffer-get-range (buffer &optional (start 0) (end (slot-value buffer 'sc::frames)))
-;;   "Get a list of the frames of BUFFER. Unlike `buffer-get-list', this function is not limited by OSC packet size and can return any number of frames, though it may be slower."
-;;   (loop :while (< start end)
-;;      :append
-;;        (let ((dec (min 400 (- end start))))
-;;          (prog1
-;;              (buffer-get-list buffer start dec)
-;;            (incf start dec)))))
-
-;; see http://doc.sccode.org/Classes/Wavetable.html#Advanced%20notes:%20wavetable%20format
-;; (defun list-in-wavetable-format (list)
-;;   "Convert a list of numbers LIST to SuperCollider's wavetable format."
-;;   (loop :for i :from 0 :below (length list)
-;;      :append (let ((a0 (nth-wrap i list))
-;;                    (a1 (nth-wrap (1+ i) list)))
-;;                (list (- (* 2 a0) a1) (- a1 a0)))))
-
-;; (defun nth-wrap (n list)
-;;   "Return the Nth value of LIST, wrapping around if the value is bigger or smaller than the list length."
-;;   (nth (mod n (length list)) list))
-
-;; (defun blend-nth (n list)
-;;   "Get the Nth value of LIST, linearly interpolating between the adjacent values if N is not an integer."
-;;   (if (= n (round n))
-;;       (nth n list)
-;;       (let* ((floor (floor n))
-;;              (ceiling (ceiling n))
-;;              (fl-diff (- n floor)))
-;;         (+ (* (nth floor list) (- 1 fl-diff))
-;;            (* (nth ceiling list) fl-diff)))))
-
-;; (defun linear-resample (list new-size)
-;;   "Using linear interpolation, resample the values of LIST to a new list of size NEW-SIZE."
-;;   (let* ((old-size (length list))
-;;          ;; this.size - 1 / (newSize - 1).max(1);
-;;          (factor (/ (1- old-size) (max (1- new-size) 1))))
-;;     (if (= old-size new-size)
-;;         list
-;;         (loop :for i :from 0 :below new-size
-;;            :collect (blend-nth (* i factor) list)))))
-
 ;;; bdef
 
 (defclass bdef ()
@@ -414,18 +333,6 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
         (if (oddp (length options))
             (error "Invalid arguments for bdef.new: ~s" args)
             (format t "key: ~s; value: ~s; options: ~s~%" key value options)))))
-
-;;; tests?
-;; (progn
-;;   (fresh-line)
-;;   (bdef.new :foo)
-;;   (bdef.new :foo "/path")
-;;   (bdef.new :foo "/path" :arg1 4 :arg2 99)
-;;   (bdef.new "/path" :arg1 4 :arg2 99)
-;;   (bdef.new "/path")
-;;   (bdef.new (env (a -1 1 -1) (a 1 1)) :wavetable 1024 :arg2 99)
-;;   (bdef.new :name (env (a -1 1 -1) (a 1 1)) :wavetable 1024 :arg2 99)
-;;   )
 
 ;;; generics
 
