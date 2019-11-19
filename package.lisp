@@ -21,4 +21,7 @@
    #:make-splits
    #:splits-length
    #:splits-points
-   #:splits-point))
+   #:splits-point
+
+   #:splits-from-aubio-onsets
+   #:splits-from-audacity-labels))
