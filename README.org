@@ -105,17 +105,31 @@ Additional metadata is loaded asynchronously in background threads using futures
 ** "Splits" functionality to define split points or regions in buffers:
 
 #+BEGIN_SRC lisp
-(make-splits (list 0 0.25 0.5 0.75) :bdef (bdef :foo)) ;; splits at the start, 25%, 50%, and 75% into the file
+  (make-splits (list 0 0.25 0.5 0.75) :bdef (bdef :foo)) ;; splits at the start, 25%, 50%, and 75% into the file.
 
-(splits-from-audacity-labels "/path/to/label.txt") ;; make a splits object from an Audacity labels file
+  (splits-from-audacity-labels "/path/to/label.txt") ;; make a splits object from an Audacity labels file.
+
+  (setf (bdef-splits :my-bdef) *) ;; set the :my-bdef bdef's :splits metadatum to the splits object generated from the above.
+
+  (splits-point :my-bdef 3 :start :second) ;; get the start of :my-bdef's fourth split in seconds.
+#+END_SRC
+
+** Splits integration with cl-patterns:
+
+#+BEGIN_SRC lisp
+  (pbind :instrument :playbuf
+         :bufnum (bdef :my-bdef)
+         :split (pwhite 0 (1- (splits-length :my-bdef))) ;; pick a random split
+         :embed (psplits) ;; the psplits pattern yields events with :start, :end, and :dur keys to play the split specified by :split from the :splits metadatum of the bdef specified as :bufnum.
+         :dur 1)
 #+END_SRC
 
 ** Integration with the [[https://aubio.org/][Aubio]] audio analysis library if installed:
 
 #+BEGIN_SRC lisp
-(splits-from-aubio-onsets "/path/to/audio/file.wav")
+(bdef::splits-from-aubio-onsets "/path/to/audio/file.wav")
 
-(bdef :pee "/path/to/pee.wav") ;; since no BPM is listed in the filename, aubio is used to detect it...
+(bdef :pee "/path/to/pee.wav") ;; since no BPM is listed in the filename, aubio is used to detect it (if installed)...
 
 (bdef-metadata :pee :tempo) ;; ...and it is stored in the bdef's :tempo metadatum! nice!
 #+END_SRC
