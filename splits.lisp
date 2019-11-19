@@ -252,7 +252,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
         (loop :for time :in beats-times
            :for i :from 0 :below (length beats-times)
            :do (progn
-                 (princ (u:concat last #\tab time #\tab i #\newline) s)
+                 (princ (concatenate 'string last #\tab time #\tab i #\newline) s)
                  (setf last time)))))))
 
 ;; bpm-tools
