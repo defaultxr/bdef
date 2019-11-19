@@ -54,23 +54,19 @@
 
 (defmethod next ((psplits psplits-pstream))
   (with-slots (splits split) psplits
-    (alexandria:when-let* ((buffer (event-value *event* :bufnum))
-                           (buffer (if (and (typep buffer 'symbol)
-                                            (bdef:bdef buffer))
-                                       (bdef:bdef buffer)
-                                       buffer))
-                           (sym (ignore-errors (find-symbol "BDEF" 'bdef))) ;; FIX: right now we assume that 
-                           (splits (or (next splits)
-                                       (event-value *event* :splits)
-                                       (when (and sym (typep buffer sym))
-                                         (bdef:bdef-splits buffer))))
-                           (split (or (next split)
-                                      (event-value *event* :split)))
-                           ;; (buffer (if (and sym (typep buffer sym))
-                           ;;             (slot-value buffer (find-symbol "BUFFER" 'bdef))
-                           ;;             buffer))
-                           ;; (use-dur-key nil) ;; FIX: have this as an optional argument?
-                           )
-      (bdef::splits-event splits split
-                          ;; :with-dur-key use-dur-key
-                          ))))
+    (alexandria:when-let ((splits (if splits
+                                      (next splits)
+                                      (or (event-value *event* :splits)
+                                          (alexandria:when-let ((buffer (or (event-value *event* :buffer)
+                                                                            (event-value *event* :bufnum))))
+                                            (typecase buffer
+                                              (bdef::bdef
+                                               (bdef:bdef-splits buffer))
+                                              (symbol
+                                               (bdef::bdef-get buffer))
+                                              (t
+                                               nil))))))
+                          (split (if split
+                                     (next split)
+                                     (event-value *event* :split))))
+      (bdef::splits-event splits split))))
