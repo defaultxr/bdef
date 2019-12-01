@@ -21,9 +21,8 @@
 (defmethod cl-collider:buffer-dur ((bdef bdef))
   (duration (bdef-buffer bdef)))
 
-;; FIX: cl-collider:free is a regular function, not a generic one
-;; (defmethod sc:free ((bdef bdef))
-;;   (bdef-free bdef))
+(defmethod cl-collider:free ((bdef bdef))
+  (bdef-free bdef))
 
 (defmethod id ((buffer cl-collider::buffer))
   (cl-collider:bufnum buffer))
