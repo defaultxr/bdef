@@ -17,6 +17,11 @@
   #+windows (uiop:getenv-pathname "TEMP")
   "The path to ffmpeg, or nil if ffmpeg could not be found.")
 
+(defparameter *bdef-backends* (list)
+  "The list of symbols enabled backends. When the user attempts to create a bdef, each backend in this list is used to try to create the bdef from the file or object. If a backend returns nil, the next backend in the list will be tried. This is repeated until the first backend successfully returns a bdef object.
+
+Note that backends are made available by loading the relevant bdef subsystem with Quicklisp or ASDF. For example, if you want to use SuperCollider/cl-collider, load `bdef/cl-collider'. Once you've loaded it, you should see that the :cl-collider keyword is in this list.")
+
 ;;; file handling
 
 (defun ensure-readable-audio-file (path &key (extensions (list "wav" "aif" "aiff")))
@@ -53,32 +58,13 @@
        :append (list (intern (string-upcase (string-trim (list #\space) key)) :keyword)
                      (string-trim (list #\space) value)))))
 
-(defun buffer-read-any (path &key (num-channels 2) wavetable (start-frame 0) bufnum (server sc:*s*))
-  "Read any file as a buffer, making sure it's converted to a SuperCollider-compatible format first, and making sure it loads as a stereo buffer even if the file is mono."
-  (let* ((path (ensure-readable-audio-file (namestring (truename path))))
-         (ffmpeg-data (ffmpeg-data path))
-         (stream-line-pos (search "Stream #0:0: Audio: " ffmpeg-data))
-         (newline (position #\newline ffmpeg-data :start stream-line-pos))
-         (mono-p (search "mono," (subseq ffmpeg-data stream-line-pos newline))))
-    (when (/= 0 start-frame)
-      (error "Loading sounds with a start frame is not yet supported.")) ;; FIX
-    (if wavetable
-        (cl-collider:buffer-read-as-wavetable path)
-        (cl-collider:buffer-read-channel path
-                                         :channels (cond ((null num-channels)
-                                                          -1)
-                                                         ((= num-channels 1)
-                                                          (if mono-p
-                                                              (list 0)
-                                                              (progn
-                                                                (warn "The requested sound (\"~s\") is stereo but a 1-channel buffer was requested. Mixing stereo files down to mono is not yet supported; therefore only the first channel was loaded." path)
-                                                                (list 0))))
-                                                         ((= num-channels 2)
-                                                          (if mono-p
-                                                              (list 0 0)
-                                                              (list 0 1))))
-                                         :bufnum bufnum
-                                         :server server))))
+;;; backend generics
+
+(defgeneric bdef-backend-load (backend object &key)
+  (:documentation "Load a file or other object into a bdef via the specified backend."))
+
+(defgeneric bdef-free-buffer (buffer)
+  (:documentation "Free a buffer via its backend."))
 
 ;;; bdef
 
@@ -201,7 +187,7 @@ Note that this function will block if the specified metadata is one of the `*aut
     (symbol (bdef-free (bdef bdef)))
     (string (bdef-free (bdef bdef)))
     (bdef
-     (cl-collider:buffer-free (bdef-buffer bdef))
+     (bdef-free-buffer (bdef-buffer bdef))
      (let ((keys (bdef-keys-pointing-to bdef dictionary)))
        (dolist (key keys)
          (remhash key dictionary))))))
@@ -211,44 +197,25 @@ Note that this function will block if the specified metadata is one of the `*aut
   (setf (gethash key dictionary) (bdef-key-cleanse value))
   (bdef-get key dictionary))
 
-(defun bdef-load (object &key (num-channels 2) (wavetable nil) (start-frame 0))
-  "Load an object into a bdef, inserting the relevant keys into the bdef dictionary."
-  (let ((bdef
-         (etypecase object
-           (sc::env ;; FIX: we shouldn't assume that the user always wants an env to be a wavetable...
-            (let* ((wavetable (or wavetable 512)) ;; FIX: if WAVETABLE is t...
-                   (buffer (cl-collider:buffer-alloc (* 2 wavetable) :chanls num-channels))
-                   (bdef (make-instance 'bdef
-                                        :key object
-                                        :buffer buffer)))
-              (setf (bdef-metadata bdef :env) object)
-              (cl-collider:buffer-setn buffer (cl-collider::list-in-wavetable-format (cl-collider::env-as-signal object wavetable)))
-              bdef))
-           (string
-            (let* ((file (bdef-key-cleanse object))
-                   (buffer (buffer-read-any file :num-channels num-channels :wavetable wavetable :start-frame start-frame))
-                   (bdef (make-instance 'bdef
-                                        :key file
-                                        :buffer buffer)))
-              (bdef-set file bdef)
-              (alexandria:doplist (key function *auto-metadata*)
-                  (let ((k key)
-                        (f function))
-                    (setf (bdef-metadata bdef key)
-                          (eager-future2:pcall
-                           (lambda ()
-                             (let ((value (funcall f bdef)))
-                               (setf (bdef-metadata bdef k) value)
-                               value))))))
-              bdef))
-           (list ;; FIX: this needs to work properly when :wavetable is t
-            (let* ((buffer (cl-collider:buffer-alloc (length object)))
-                   (bdef (make-instance 'bdef
-                                        :key object
-                                        :buffer buffer)))
-              (cl-collider:buffer-setn buffer object)
-              bdef)))))
-    (setf (bdef-metadata bdef :wavetable) (and wavetable t))
+(defgeneric bdef-load (object &key)
+  (:documentation "Load a file or other object into a bdef. Different backends will support different object types, and different key arguments. Here are the key arguments supported by one or more backends:
+
+- num-channels - Number of channels to load (defaults to 2).
+- wavetable - Whether to load the object in wavetable format. If T, the buffer length will be the next power of two. If a number is provided, load the object as a wavetable of that size.
+- start-frame - Skip this many frames from the start of the file when loading it."))
+
+(defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) (start-frame 0))
+  (let* ((file (bdef-key-cleanse object))
+         (bdef (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (alexandria:remove-from-plist args :backend))))
+    (alexandria:doplist (key function *auto-metadata*)
+        (let ((k key)
+              (f function))
+          (setf (bdef-metadata bdef key)
+                (eager-future2:pcall
+                 (lambda ()
+                   (let ((value (funcall f bdef)))
+                     (setf (bdef-metadata bdef k) value)
+                     value))))))
     bdef))
 
 ;;; auto-metadata
@@ -312,6 +279,8 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
                 (error "No bdef with the key ~a defined." key)
                 (bdef-load key))))))
 
+(defmethod no-applicable-method (bdef-load &rest args)
+  (error "None of the enabled bdef backends support loading ~s." (cadr args)))
 
 ;;; generics
 

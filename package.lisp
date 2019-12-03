@@ -4,6 +4,7 @@
   (:use #:cl)
   (:export
    #:*bdef-temporary-directory*
+   #:*bdef-backends*
    #:*bdef-dictionary*
    #:all-bdefs
    #:bdef

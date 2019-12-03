@@ -8,6 +8,14 @@ Basically, this simplifies buffer management in [[https://github.com/byulparan/c
 
 * Features
 
+** Designed to work with multiple backends:
+
+Enable the cl-collider backend like so:
+
+#+BEGIN_SRC lisp
+  (ql:quickload :bdef/cl-collider)
+#+END_SRC
+
 ** Can be re-evaluated without loading a new buffer:
 
 Compare:
