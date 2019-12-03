@@ -63,7 +63,7 @@
                                               (bdef::bdef
                                                (bdef:bdef-splits buffer))
                                               (symbol
-                                               (bdef::bdef-get buffer))
+                                               (bdef:bdef-splits (bdef::bdef-get buffer)))
                                               (t
                                                nil))))))
                           (split (if split
