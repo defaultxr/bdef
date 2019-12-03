@@ -89,7 +89,9 @@ Load the ~bdef/cl-patterns~ system to enable this.
 ** Allows metadata about the buffer to be stored:
 
 #+BEGIN_SRC lisp
-(bdef-metadata (bdef :snd) :tempo) ;; get the tempo of the file in beats per second
+(setf (bdef-metadata (bdef :snd) :tempo) (/ 99 60)) ;; set :snd's tempo to 99 BPM.
+
+(bdef-metadata (bdef :snd) :tempo) ;; get the stored tempo value.
 #+END_SRC
 
 ** Automatically gets various metadata for a file when available:
@@ -136,6 +138,7 @@ Additional metadata is loaded asynchronously in background threads using futures
 
 * Future
 
-- Right now, ~cl-collider~ is required, and is the only backend supported. In the future, ~bdef~ should be usable with [[http://incudine.sourceforge.net/][Incudine]] as well.
+- Right now, ~cl-collider~ is the only supported backend. In the future, [[http://incudine.sourceforge.net/][Incudine]] should work as well.
 - Support for configurable pathname shortcuts. (i.e. set ~foo~ as a shortcut to ~/a/long/path/name/~, then provide ~"foo/bar.wav"~ instead of ~"/a/long/path/name/bar.wav"~.)
-- Test to make sure the ~#+windows~ stuff works. (:
+- Loading with ~num-channels~ set to 1 loads only the first channel. Might make more sense to mix all channels down to mono, perhaps as an option.
+- General cleanup and improvements.

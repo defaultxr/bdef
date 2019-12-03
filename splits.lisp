@@ -78,6 +78,12 @@
 (defmethod sequence:length ((this splits))
   (splits-length this))
 
+(defmethod frames ((this splits))
+  (frames (splits-bdef this)))
+
+(defmethod duration ((this splits))
+  (duration (splits-bdef this)))
+
 (defun splits-points (splits &optional (point :start) (type :percent))
   "Get the split points for POINTS (i.e. start, end, loops, comments) from SPLITS converted to TYPE (i.e. percent, samples, seconds)."
   (assert (typep splits 'splits) (splits))
@@ -184,7 +190,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
           (when (plusp get)
             (return-from extract-bpm-from-file-metadata get)))))))
 
-;; aubio
+;;; aubio
 
 (defparameter *aubio-python-directory* #P"~/misc/aubio/python/demos/")
 
@@ -255,14 +261,14 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
                  (princ (concatenate 'string last #\tab time #\tab i #\newline) s)
                  (setf last time)))))))
 
-;; bpm-tools
+;;; bpm-tools
 
 (defun bpm-tools-bpm (file)
   "Use bpm-tools' \"bpm\" utility to get the BPM of FILE."
   (values (read-from-string (uiop:run-program (format nil "sox -V1 \"~a\" -r 44100 -e float -c 1 -t raw - | bpm" file)
                                               :force-shell t :output '(:string :stripped t)))))
 
-;; audacity splits/labels
+;;; audacity labels
 
 (defun splits-from-audacity-labels (labels)
   "Make a `splits' from an Audacity labels file."
@@ -278,14 +284,17 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
           :collect (caddr parsed) :into comments
           :finally (return (make-splits starts :ends ends :comments comments :point-type :seconds)))))))
 
-;; snd marks
+;;; op-1 drumsets
+;; https://github.com/padenot/libop1/blob/master/src/op1_drum_impl.cpp
+
+;;; snd marks
 ;; TODO
 
-;; echo nest / amen
+;;; echo nest / amen
 ;; https://github.com/algorithmic-music-exploration/amen
 ;; TODO
 
-;; acousticbrainz
+;;; acousticbrainz
 ;; https://beets.readthedocs.io/en/v1.4.7/plugins/acousticbrainz.html
 ;; TODO
 

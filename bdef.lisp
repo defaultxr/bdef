@@ -31,7 +31,7 @@
               (progn
                 (ensure-directories-exist *bdef-temporary-directory*)
                 (uiop:run-program (list *ffmpeg-path* "-i" path output-filename) ;; FIX: cache this output and parse it for bdef metadata
-                                  ;; :output '(:string :stripped t))
+                                  ;; :output '(:string :stripped t)
                                   )
                 output-filename))))))
 
@@ -164,10 +164,9 @@ Note that this function will block if the specified metadata is one of the `*aut
 (defun (setf bdef-metadata) (value bdef key)
   ;; if VALUE is a splits object and its `splits-bdef' is nil, set it to point to this bdef.
   (let ((bdef (ensure-bdef bdef)))
-    (alexandria:when-let ((type-sym (ignore-errors (find-symbol "SPLITS" 'bdef))))
-      (when (and (typep value type-sym)
-                 (null (funcall 'splits-bdef value)))
-        (setf (splits-bdef value) bdef)))
+    (when (and (typep value 'splits)
+               (null (funcall 'splits-bdef value)))
+      (setf (splits-bdef value) bdef))
     (setf (gethash key (slot-value bdef 'metadata)) value)))
 
 (defun bdef-metadata-keys (bdef)
@@ -313,26 +312,6 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
                 (error "No bdef with the key ~a defined." key)
                 (bdef-load key))))))
 
-(defun bdef.new (&rest args) ;; (value nil value-provided-p) &key (num-channels 2) (wavetable nil) (start-frame 0) metadata
-  "Automaticaly load a buffer or reference one that's already loaded. KEY is the name to give the buffer in the bdef dictionary. VALUE is the path to the file to load, or the data to construct the buffer from (i.e. an envelope, a list of frames, etc).
-
-Without a VALUE, bdef will look up the key and return the buffer that already exists. If the KEY is a string, it's assumed to be a pathname and will be loaded automatically if it's not already in memory."
-  (let* ((key (car args))
-         (key-is-value (or (stringp key)
-                           (pathnamep key)
-                           (typep key 'cl-collider:env)))
-         (value (if key-is-value
-                    key
-                    (elt args 1)))
-         (options (if key-is-value
-                      (cdr args)
-                      (cddr args))
-           ))
-    (if (= 1 (length args))
-        (format t "key lookup: ~s~%" key)
-        (if (oddp (length options))
-            (error "Invalid arguments for bdef.new: ~s" args)
-            (format t "key: ~s; value: ~s; options: ~s~%" key value options)))))
 
 ;;; generics
 
@@ -378,3 +357,8 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
 (defmethod duration ((bdef bdef))
   (duration (bdef-buffer bdef)))
 
+(defgeneric sample-rate (object)
+  (:documentation "Get the sample rate of OBJECT."))
+
+(defmethod sample-rate ((bdef bdef))
+  (sample-rate (bdef-buffer bdef)))
