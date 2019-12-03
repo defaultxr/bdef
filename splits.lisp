@@ -60,8 +60,9 @@
   (let* ((bdef (splits-bdef splits)) ;; FIX: handle the case if bdef is NIL.
          (conv-func (%splits-conversion-function-name splits type))
          (conv-func-total (case conv-func
-                            ((percents-samples samples-percents samples-seconds) (frames bdef))
-                            ((percents-seconds seconds-percents seconds-samples) (duration bdef)))))
+                            ((percents-samples samples-percents) (frames bdef))
+                            ((samples-seconds seconds-samples) (sample-rate bdef))
+                            ((percents-seconds seconds-percents) (duration bdef)))))
     (if (eql 'identity conv-func)
         'identity
         (lambda (x) (funcall conv-func x conv-func-total)))))
@@ -126,20 +127,20 @@
         (elt array split)
         (funcall conv-func (elt array split)))))
 
-(defun bdef-end-point (bdef &optional (type :percent))
-  "Get the end point of BDEF."
-  ;; FIX: use generic bdef methods, not these sc ones...
-  (case type
-    ((:percent :percents) 1.0)
-    ((:sample :frame :samples :frames) (frames bdef))
-    ((:second :seconds) (duration bdef))))
+(defun end-point (object &optional (type :percent))
+  "Get the end point of OBJECT."
+  (etypecase object
+    ((or bdef splits)
+     (ecase type
+       ((:percent :percents) 1.0)
+       ((:sample :frame :samples :frames) (frames object))
+       ((:second :seconds) (duration object))))))
 
 (defun percents-samples (percent total-samples)
   (round (* percent total-samples)))
 
 (defun samples-percents (samples total-samples)
-  (error "samples-percents conversion is not done yet.") ;; FIX
-  )
+  (/ samples total-samples))
 
 (defun percents-seconds (percent total-seconds)
   (error "percent-seconds conversion is not done yet.") ;; FIX
@@ -148,13 +149,11 @@
 (defun seconds-percents (seconds total-seconds)
   (/ seconds total-seconds))
 
-(defun seconds-samples (seconds total-seconds)
-  (error "seconds-samples conversion is not done yet.") ;; FIX
-  )
+(defun seconds-samples (seconds sample-rate)
+  (* seconds sample-rate))
 
-(defun samples-seconds (samples total-samples)
-  (error "samples-seconds conversion is not done yet.") ;; FIX
-  )
+(defun samples-seconds (samples sample-rate)
+  (/ samples sample-rate))
 
 ;;; splits / analysis methods
 

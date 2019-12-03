@@ -31,7 +31,7 @@
                (let ((ns (1+ end-split)))
                  (when (< ns (bdef::splits-length splits))
                    (bdef::splits-point splits (1+ end-split) :start type)))
-               (bdef::bdef-end-point (bdef::splits-bdef splits) type))))
+               (bdef::end-point (bdef::splits-bdef splits) type))))
     (let* ((end-split (or end-split split))
            (start (bdef::splits-point splits split :start type))
            (end (ensure-end end-split type)))
