@@ -29,7 +29,7 @@
    (ends :initarg :ends :initform nil :type (or null (vector number)) :documentation "The vector of split end points, or NIL if no end points are defined.")
    (loops :initarg :loops :initform nil :type (or null (vector number)) :documentation "The vector of split loop points, or NIL if no loop points are defined.")
    (comments :initarg :comments :initform nil :type (or null (vector (or null string))) :documentation "The vector of comments for each split point.")
-   (point-type :initarg :point-type :initform :percents :accessor splits-point-type :type symbol :documentation "Whether the splits are indexed by percents (i.e. 0.5 is in the middle of the buffer), samples, or seconds.")
+   (unit :initarg :unit :initform :percents :accessor splits-unit :type symbol :documentation "Whether the splits are indexed by percents (i.e. 0.5 is in the middle of the buffer), samples, or seconds.")
    (bdef :initarg :bdef :initform nil :accessor splits-bdef :type (or null bdef) :documentation "The bdef object that this splits references (i.e. for information like duration, sample rate, etc, for converting point data).")
    (metadata :initarg :metadata :initform nil :accessor splits-metadata :documentation "Any additional metadata for the splits object."))
   (:documentation "List of split data for dividing buffers into pieces."))
@@ -37,20 +37,20 @@
 (defmethod print-object ((this splits) stream)
   (format stream "#<~a~@[ :BDEF ~a~]>" 'splits (splits-bdef this)))
 
-(defun make-splits (starts &key ends loops comments (point-type :percents) bdef metadata)
+(defun make-splits (starts &key ends loops comments (unit :percents) bdef metadata)
   "Make a `splits' object."
-  (assert (member point-type (list :percents :samples :seconds)) (point-type))
+  (assert (member unit (list :percents :samples :seconds)) (unit))
   (assert (typep bdef '(or null bdef)))
   (make-instance 'splits
                  :starts (coerce starts 'vector)
                  :ends (when ends (coerce ends 'vector))
                  :loops (when loops (coerce loops 'vector))
                  :comments (when comments (coerce comments 'vector))
-                 :point-type point-type
+                 :unit unit
                  :bdef bdef
                  :metadata metadata))
 
-(defun %splits-ensure-point-type (point)
+(defun %splits-ensure-unit (point)
   "Ensure POINT is one of the splits point types."
   (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
   (ecase point
@@ -70,10 +70,10 @@
 (defun %splits-conversion-function-name (splits type)
   "Get the name of the conversion function to convert SPLITS' type into the split type specified by TYPE."
   (let ((type (%splits-ensure-type type))
-        (point-type (slot-value splits 'point-type)))
-    (if (string= (symbol-name type) (symbol-name point-type))
+        (unit (slot-value splits 'unit)))
+    (if (string= (symbol-name type) (symbol-name unit))
         'identity
-        (intern (concatenate 'string (symbol-name point-type) "-" (symbol-name type)) 'bdef))))
+        (intern (concatenate 'string (symbol-name unit) "-" (symbol-name type)) 'bdef))))
 
 (defun %splits-conversion-function (splits type)
   "Get a function that can be used to convert SPLITS' type into the split type specified by TYPE."
@@ -110,7 +110,7 @@
   (assert (typep splits 'splits) (splits))
   (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
   (assert (member type (list :percent :sample :frame :second :percents :samples :frames :seconds)) (type))
-  (let ((array (slot-value splits (%splits-ensure-point-type point)))
+  (let ((array (slot-value splits (%splits-ensure-unit point)))
         (conv-func (%splits-conversion-function splits (%splits-ensure-type type))))
     (if (or (null array)
             (eq 'identity conv-func))
@@ -139,7 +139,7 @@
   (let* ((splits (if (typep splits '(or bdef symbol))
                      (bdef-splits splits)
                      splits))
-         (array (slot-value splits (%splits-ensure-point-type point)))
+         (array (slot-value splits (%splits-ensure-unit point)))
          (conv-func (%splits-conversion-function splits type)))
     (when (null array)
       (return-from splits-point nil))
@@ -215,7 +215,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 (defun splits-from-aubio-onsets (file &rest args &key &allow-other-keys) ;; FIX: make sure this works with bdefs
   (apply 'make-splits
          (coerce (apply 'aubio-onsets-read file args) 'vector) ;; FIX: just generate as a vector
-         :point-type :seconds
+         :unit :seconds
          (when (typep file 'bdef)
            (list :bdef file))))
 
@@ -282,7 +282,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
           :collect (parse-float:parse-float (car parsed)) :into starts
           :collect (parse-float:parse-float (cadr parsed)) :into ends
           :collect (caddr parsed) :into comments
-          :finally (return (make-splits starts :ends ends :comments comments :point-type :seconds)))))))
+          :finally (return (make-splits starts :ends ends :comments comments :unit :seconds)))))))
 
 ;;; op-1 drumsets
 ;; https://github.com/padenot/libop1/blob/master/src/op1_drum_impl.cpp
