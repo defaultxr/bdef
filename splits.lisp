@@ -1,5 +1,25 @@
 (in-package #:bdef)
 
+;;; conversions
+
+(defun percents-samples (percent total-samples)
+  (round (* percent total-samples)))
+
+(defun samples-percents (samples total-samples)
+  (/ samples total-samples))
+
+(defun percents-seconds (percent total-seconds)
+  (* percent total-seconds))
+
+(defun seconds-percents (seconds total-seconds)
+  (/ seconds total-seconds))
+
+(defun seconds-samples (seconds sample-rate)
+  (* seconds sample-rate))
+
+(defun samples-seconds (samples sample-rate)
+  (/ samples sample-rate))
+
 ;;; splits
 ;; FIX: rename point-type/type to "units"
 ;; FIX: can bdef be a subclass of sequence so that it can be used as the list input of prand, etc?
@@ -135,25 +155,6 @@
        ((:percent :percents) 1.0)
        ((:sample :frame :samples :frames) (frames object))
        ((:second :seconds) (duration object))))))
-
-(defun percents-samples (percent total-samples)
-  (round (* percent total-samples)))
-
-(defun samples-percents (samples total-samples)
-  (/ samples total-samples))
-
-(defun percents-seconds (percent total-seconds)
-  (error "percent-seconds conversion is not done yet.") ;; FIX
-  )
-
-(defun seconds-percents (seconds total-seconds)
-  (/ seconds total-seconds))
-
-(defun seconds-samples (seconds sample-rate)
-  (* seconds sample-rate))
-
-(defun samples-seconds (samples sample-rate)
-  (/ samples sample-rate))
 
 ;;; splits / analysis methods
 
