@@ -21,7 +21,6 @@
   (/ samples sample-rate))
 
 ;;; splits
-;; FIX: rename point-type/type to "units"
 ;; FIX: can bdef be a subclass of sequence so that it can be used as the list input of prand, etc?
 
 (defclass splits (standard-object #+sbcl sequence)
@@ -29,7 +28,7 @@
    (ends :initarg :ends :initform nil :type (or null (vector number)) :documentation "The vector of split end points, or NIL if no end points are defined.")
    (loops :initarg :loops :initform nil :type (or null (vector number)) :documentation "The vector of split loop points, or NIL if no loop points are defined.")
    (comments :initarg :comments :initform nil :type (or null (vector (or null string))) :documentation "The vector of comments for each split point.")
-   (unit :initarg :unit :initform :percents :accessor splits-unit :type symbol :documentation "Whether the splits are indexed by percents (i.e. 0.5 is in the middle of the buffer), samples, or seconds.")
+   (unit :initarg :unit :initform :percents :accessor splits-unit :type symbol :documentation "The unit type of each split point, i.e. percents, samples, or seconds.")
    (bdef :initarg :bdef :initform nil :accessor splits-bdef :type (or null bdef) :documentation "The bdef object that this splits references (i.e. for information like duration, sample rate, etc, for converting point data).")
    (metadata :initarg :metadata :initform nil :accessor splits-metadata :documentation "Any additional metadata for the splits object."))
   (:documentation "List of split data for dividing buffers into pieces."))
@@ -59,26 +58,26 @@
     ((:loops :loop) 'loops)
     ((:comments :comment) 'comments)))
 
-(defun %splits-ensure-type (type)
-  "Ensure TYPE is one of the splits position types."
-  (assert (member (make-keyword type) (list :percent :sample :frame :second :percents :samples :frames :seconds)) (type))
-  (ecase (make-keyword type)
+(defun %splits-ensure-unit (unit)
+  "Ensure UNIT is one of the splits position unit types."
+  (assert (member (make-keyword unit) (list :percent :sample :frame :second :percents :samples :frames :seconds)) (unit))
+  (ecase (make-keyword unit)
     ((:percent :percents) 'percents)
     ((:sample :samples :frame :frames) 'samples)
     ((:second :seconds) 'seconds)))
 
-(defun %splits-conversion-function-name (splits type)
-  "Get the name of the conversion function to convert SPLITS' type into the split type specified by TYPE."
-  (let ((type (%splits-ensure-type type))
-        (unit (slot-value splits 'unit)))
-    (if (string= (symbol-name type) (symbol-name unit))
+(defun %splits-conversion-function-name (splits unit)
+  "Get the name of the conversion function to convert SPLITS' unit type into the unit specified."
+  (let ((unit (%splits-ensure-unit unit))
+        (unit-slot (slot-value splits 'unit)))
+    (if (string= (symbol-name unit) (symbol-name unit-slot))
         'identity
-        (intern (concatenate 'string (symbol-name unit) "-" (symbol-name type)) 'bdef))))
+        (intern (concatenate 'string (symbol-name unit-slot) "-" (symbol-name unit)) 'bdef))))
 
-(defun %splits-conversion-function (splits type)
-  "Get a function that can be used to convert SPLITS' type into the split type specified by TYPE."
+(defun %splits-conversion-function (splits unit)
+  "Get a function that can be used to convert SPLITS' unit into the unit type specified."
   (let* ((bdef (splits-bdef splits)) ;; FIX: handle the case if bdef is NIL.
-         (conv-func (%splits-conversion-function-name splits type))
+         (conv-func (%splits-conversion-function-name splits unit))
          (conv-func-total (case conv-func
                             ((percents-samples samples-percents) (frames bdef))
                             ((samples-seconds seconds-samples) (sample-rate bdef))
@@ -105,13 +104,13 @@
 (defmethod duration ((this splits))
   (duration (splits-bdef this)))
 
-(defun splits-points (splits &optional (point :start) (type :percent))
-  "Get the split points for POINTS (i.e. start, end, loops, comments) from SPLITS converted to TYPE (i.e. percent, samples, seconds)."
+(defun splits-points (splits &optional (point :start) (unit :percent))
+  "Get the split points for POINTS (i.e. start, end, loops, comments) from SPLITS converted to UNIT (i.e. percent, samples, seconds)."
   (assert (typep splits 'splits) (splits))
   (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
-  (assert (member type (list :percent :sample :frame :second :percents :samples :frames :seconds)) (type))
+  (assert (member unit (list :percent :sample :frame :second :percents :samples :frames :seconds)) (unit))
   (let ((array (slot-value splits (%splits-ensure-unit point)))
-        (conv-func (%splits-conversion-function splits (%splits-ensure-type type))))
+        (conv-func (%splits-conversion-function splits (%splits-ensure-unit unit))))
     (if (or (null array)
             (eq 'identity conv-func))
         array
@@ -119,39 +118,39 @@
 
 ;; FIX: setf functions for these?
 
-(defun splits-starts (splits &optional (type :percent))
-  (splits-points splits :start type))
+(defun splits-starts (splits &optional (unit :percent))
+  (splits-points splits :start unit))
 
-(defun splits-ends (splits &optional (type :percent))
-  (splits-points splits :end type))
+(defun splits-ends (splits &optional (unit :percent))
+  (splits-points splits :end unit))
 
-(defun splits-loops (splits &optional (type :percent))
-  (splits-points splits :loop type))
+(defun splits-loops (splits &optional (unit :percent))
+  (splits-points splits :loop unit))
 
-(defun splits-comments (splits &optional (type :percent))
-  (splits-points splits :comment type))
+(defun splits-comments (splits &optional (unit :percent))
+  (splits-points splits :comment unit))
 
-(defun splits-point (splits split &optional (point :start) (type :percent))
-  "Get the split point SPLIT from SPLITS, converting to the correct TYPE (percent, samples, seconds)."
+(defun splits-point (splits split &optional (point :start) (unit :percent))
+  "Get the split point SPLIT from SPLITS, converting to the correct UNIT (percent, samples, seconds)."
   (assert (integerp split) (split))
   (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
-  (assert (member type (list :percent :sample :frame :second :percents :samples :frames :seconds)) (type))
+  (assert (member unit (list :percent :sample :frame :second :percents :samples :frames :seconds)) (unit))
   (let* ((splits (if (typep splits '(or bdef symbol))
                      (bdef-splits splits)
                      splits))
          (array (slot-value splits (%splits-ensure-unit point)))
-         (conv-func (%splits-conversion-function splits type)))
+         (conv-func (%splits-conversion-function splits unit)))
     (when (null array)
       (return-from splits-point nil))
     (if (eql 'identity conv-func)
         (elt array split)
         (funcall conv-func (elt array split)))))
 
-(defun end-point (object &optional (type :percent))
+(defun end-point (object &optional (unit :percent))
   "Get the end point of OBJECT."
   (etypecase object
     ((or bdef splits)
-     (ecase type
+     (ecase unit
        ((:percent :percents) 1.0)
        ((:sample :frame :samples :frames) (frames object))
        ((:second :seconds) (duration object))))))

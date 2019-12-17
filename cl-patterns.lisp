@@ -24,17 +24,17 @@
 
 ;;; splits
 
-(defun bdef::splits-event (splits split &key end-split (type :percent))
+(defun bdef::splits-event (splits split &key end-split (unit :percent))
   "Get an `event' for a `bdef:splits' split."
-  (flet ((ensure-end (end-split type)
-           (or (bdef::splits-point splits end-split :end type)
+  (flet ((ensure-end (end-split unit)
+           (or (bdef::splits-point splits end-split :end unit)
                (let ((ns (1+ end-split)))
                  (when (< ns (bdef::splits-length splits))
-                   (bdef::splits-point splits (1+ end-split) :start type)))
-               (bdef::end-point splits type))))
+                   (bdef::splits-point splits (1+ end-split) :start unit)))
+               (bdef::end-point splits unit))))
     (let* ((end-split (or end-split split))
-           (start (bdef::splits-point splits split :start type))
-           (end (ensure-end end-split type)))
+           (start (bdef::splits-point splits split :start unit))
+           (end (ensure-end end-split unit)))
       (event :start start :end end
              :dur (time-dur (abs (- (ensure-end end-split :seconds)
                                     (bdef::splits-point splits split :start :seconds)))
