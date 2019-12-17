@@ -196,7 +196,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 (defun aubio-onsets-read (file &rest args &key (algorithm :default) (threshold 0.3) (silence -90) &allow-other-keys)
   "Use the \"aubioonset\" utility to get a list of onsets in FILE. FILE can be a path to a file or a cl-collider buffer object. The returned list gives onsets in seconds from the start of the file."
-  ;; FIX: use the algorithm, threshold, and silence keys
+  (declare (ignore algorithm threshold silence args)) ;; FIX: actually implement these arguments
   ;; FIX: uiop:run-program allows you to read output as a stream. that might be better?
   (let ((file (ensure-readable-audio-file
                (if (or (stringp file)
@@ -229,7 +229,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 (defun aubio-demo-tempo (file &key sample-rate)
   "Use aubio's demo_tempo.py to get a list of beats in FILE. The returned list gives onsets in seconds from the start of the file."
-  ;; FIX: use the sample-rate key
+  (declare (ignore sample-rate)) ;; FIX: actually use the sample-rate key
   ;; FIX: uiop:run-program allows you to read output as a stream. that might be better?
   (let ((file (ensure-readable-audio-file (path file))))
     (labels ((split (string &optional list)

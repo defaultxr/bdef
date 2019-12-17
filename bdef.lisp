@@ -278,7 +278,7 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
                 (error "No bdef with the key ~a defined." key)
                 (bdef-load key))))))
 
-(defmethod no-applicable-method (bdef-load &rest args)
+(defmethod no-applicable-method ((method (eql #'bdef-load)) &rest args)
   (error "None of the enabled bdef backends support loading ~s." (cadr args)))
 
 ;;; generics
