@@ -8,14 +8,6 @@ Basically, this simplifies buffer management in [[https://github.com/byulparan/c
 
 * Features
 
-** Designed to work with multiple backends:
-
-Enable the cl-collider backend like so:
-
-#+BEGIN_SRC lisp
-  (ql:quickload :bdef/cl-collider)
-#+END_SRC
-
 ** Can be re-evaluated without loading a new buffer:
 
 Compare:
@@ -40,13 +32,13 @@ versus:
 
 ...To force a file to be reloaded, simply call ~bdef-free~ on it, then call ~bdef~ again.
 
-** Automatically converts files unsupported by SuperCollider if you have ffmpeg installed:
+** Automatically converts files unsupported by the backend if you have ffmpeg installed:
 
 #+BEGIN_SRC lisp
 (bdef :bar "/blah.mp3") ;; works!
 #+END_SRC
 
-It does this by storing them in a temporary directory.
+It does this by storing them in a temporary directory (~/tmp/bdef/~ by default on linux and mac).
 
 ** No additional name needed if loading from a file:
 
@@ -93,6 +85,16 @@ Load the ~bdef/cl-collider~ system to enable this.
 #+END_SRC
 
 Load the ~bdef/cl-patterns~ system to enable this.
+
+** Designed to work with multiple backends:
+
+At the moment, [[https://supercollider.github.io/][SuperCollider]]/[[https://github.com/byulparan/cl-collider][cl-collider]] is the main one. Support for [[https://incudine.sourceforge.net/][Incudine]] is planned.
+
+Enable the cl-collider backend like so:
+
+#+BEGIN_SRC lisp
+  (ql:quickload :bdef/cl-collider)
+#+END_SRC
 
 ** Allows metadata about the buffer to be stored:
 
@@ -149,4 +151,3 @@ Additional metadata is loaded asynchronously in background threads using futures
 - Right now, ~cl-collider~ is the only supported backend. In the future, [[http://incudine.sourceforge.net/][Incudine]] should work as well.
 - Support for configurable pathname shortcuts. (i.e. set ~foo~ as a shortcut to ~/a/long/path/name/~, then provide ~"foo/bar.wav"~ instead of ~"/a/long/path/name/bar.wav"~.)
 - Loading with ~num-channels~ set to 1 loads only the first channel. Might make more sense to mix all channels down to mono, perhaps as an option.
-- General cleanup and improvements.
