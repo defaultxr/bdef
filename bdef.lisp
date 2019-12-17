@@ -7,14 +7,13 @@
 ;;; global variables/configuration
 
 (defparameter *bdef-temporary-directory*
-  #+linux "/tmp/supercollider/"
-  #+darwin "/tmp/supercollider/"
-  #+windows (concatenate 'string (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/")
+  #+(or linux darwin) "/tmp/bdef/"
+  #+windows (concatenate 'string (uiop:getenv-pathname "TEMP") "/bdef/")
   "The directory bdef should store its temporary files in (i.e. the .wav files generated from format auto-conversion).")
 
 (defparameter *ffmpeg-path*
   #+(or linux darwin) (ignore-errors (uiop:run-program "which ffmpeg" :output (list :string :stripped t)))
-  #+windows (uiop:getenv-pathname "TEMP")
+  #+windows (concatenate 'string (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/") ;; FIX; this is almost certainly wrong
   "The path to ffmpeg, or nil if ffmpeg could not be found.")
 
 (defparameter *bdef-backends* (list)
