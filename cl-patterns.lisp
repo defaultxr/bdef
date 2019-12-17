@@ -54,20 +54,20 @@
 
 (defmethod next ((psplits psplits-pstream))
   (with-slots (splits split) psplits
-    (alexandria:when-let ((splits (if splits
-                                      (next splits)
-                                      (or (event-value *event* :splits)
-                                          (alexandria:when-let ((buffer (or (event-value *event* :buffer)
-                                                                            (event-value *event* :bufnum))))
-                                            (typecase buffer
-                                              (bdef::bdef
-                                               (bdef:bdef-splits buffer))
-                                              (symbol
-                                               (bdef:bdef-splits (bdef::bdef-get buffer)))
-                                              (t
-                                               nil))))))
-                          (split (if split
-                                     (next split)
-                                     (event-value *event* :split))))
+    (when-let ((splits (if splits
+                           (next splits)
+                           (or (event-value *event* :splits)
+                               (when-let ((buffer (or (event-value *event* :buffer)
+                                                      (event-value *event* :bufnum))))
+                                 (typecase buffer
+                                   (bdef::bdef
+                                    (bdef:bdef-splits buffer))
+                                   (symbol
+                                    (bdef:bdef-splits (bdef::bdef-get buffer)))
+                                   (t
+                                    nil))))))
+               (split (if split
+                          (next split)
+                          (event-value *event* :split))))
       (unless (>= split (bdef:splits-length splits))
         (bdef::splits-event splits split)))))

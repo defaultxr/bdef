@@ -61,8 +61,8 @@
 
 (defun %splits-ensure-type (type)
   "Ensure TYPE is one of the splits position types."
-  (assert (member (alexandria:make-keyword type) (list :percent :sample :frame :second :percents :samples :frames :seconds)) (type))
-  (ecase (alexandria:make-keyword type)
+  (assert (member (make-keyword type) (list :percent :sample :frame :second :percents :samples :frames :seconds)) (type))
+  (ecase (make-keyword type)
     ((:percent :percents) 'percents)
     ((:sample :samples :frame :frames) 'samples)
     ((:second :seconds) 'seconds)))
@@ -183,10 +183,10 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 (defun extract-bpm-from-file-metadata (file) ;; FIX: this should be used on the source too (i.e. mp3 files) in case there is a BPM value in the tags.
   "Extract the BPM from the metadata embedded in the file using ffmpeg to read it."
   (when file
-    (alexandria:when-let ((metadata (ffmpeg-metadata file)))
+    (when-let ((metadata (ffmpeg-metadata file)))
       (dolist (tag (list :tbp :tempo :bpm :tbpm))
-        (alexandria:when-let* ((get (getf metadata tag))
-                               (get (parse-float:parse-float get :junk-allowed t)))
+        (when-let* ((get (getf metadata tag))
+                    (get (parse-float:parse-float get :junk-allowed t)))
           (when (plusp get)
             (return-from extract-bpm-from-file-metadata get)))))))
 

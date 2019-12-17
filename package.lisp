@@ -1,7 +1,8 @@
 ;;;; package.lisp
 
 (defpackage #:bdef
-  (:use #:cl)
+  (:use #:cl
+        #:alexandria)
   (:export
    #:*bdef-temporary-directory*
    #:*bdef-backends*

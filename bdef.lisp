@@ -46,10 +46,10 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 
 (defun ffmpeg-metadata (file)
   "Get the metadata for a file from ffmpeg's output."
-  (alexandria:when-let* ((split (split-sequence:split-sequence #\newline (ffmpeg-data file)))
-                         (metadata-pos (position "  Metadata:" split :test 'string=))
-                         (metadata-end (position-if (lambda (s) (eq 0 (search "  Duration: " s))) split))
-                         (metadata (subseq split (1+ metadata-pos) metadata-end)))
+  (when-let* ((split (split-sequence:split-sequence #\newline (ffmpeg-data file)))
+              (metadata-pos (position "  Metadata:" split :test 'string=))
+              (metadata-end (position-if (lambda (s) (eq 0 (search "  Duration: " s))) split))
+              (metadata (subseq split (1+ metadata-pos) metadata-end)))
     (loop :for i :in metadata
        :for pos = (position #\: i)
        :for key = (subseq i 0 pos)
@@ -83,7 +83,7 @@ Note that backends are made available by loading the relevant bdef subsystem wit
     (format stream "~s is a ~s.~%  It is ~s seconds long (~s frames), with ~s channels.~%" bdef 'bdef (duration bdef) (frames bdef) (num-channels bdef))
     (format stream "~@[  It contains the audio from the file ~s.~%~]" (path bdef))
     (format stream "  Keys that point to this buffer are: ~s~%" (bdef-keys-pointing-to bdef))
-    (alexandria:when-let ((meta-keys (bdef-metadata-keys bdef)))
+    (when-let ((meta-keys (bdef-metadata-keys bdef)))
       (format stream "  It has the following metadata:~%")
       (loop :for key :in meta-keys
          :do (format stream "    ~s -> ~s~%" key (bdef-metadata bdef key)))))) ;; FIX: use format's indentation directive?
@@ -96,14 +96,14 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 
 Note that this doesn't include aliases (i.e. bdef keys that point to another key) unless INCLUDE-ALIASES is true."
   (if include-aliases
-      (alexandria:hash-table-keys *bdef-dictionary*)
+      (hash-table-keys *bdef-dictionary*)
       (loop :for i :being :the hash-keys :of *bdef-dictionary*
          :if (typep (gethash i *bdef-dictionary*) 'bdef)
          :collect i)))
 
 (defun bdef-dictionary-keys (&key (include-redirects t) (dictionary *bdef-dictionary*))
   "Return a list of all the keys for the bdef dictionary DICTIONARY."
-  (let ((keys (alexandria:hash-table-keys dictionary)))
+  (let ((keys (hash-table-keys dictionary)))
     (if include-redirects
         keys
         (loop :for key :in keys
@@ -156,7 +156,7 @@ Note that this function will block if the specified metadata is one of the `*aut
 
 (defun bdef-metadata-keys (bdef)
   "Get a list of all keys in BDEF's metadata."
-  (alexandria:hash-table-keys (slot-value (ensure-bdef bdef) 'metadata)))
+  (hash-table-keys (slot-value (ensure-bdef bdef) 'metadata)))
 
 (defun bdef-splits (bdef)
   "Get any `splits' from BDEF's metadata, searching in preferred order (i.e. :splits key first, etc)."
@@ -171,7 +171,7 @@ Note that this function will block if the specified metadata is one of the `*aut
 
 (defun bdef-keys-pointing-to (bdef &optional (dictionary *bdef-dictionary*))
   "Get a list of all the keys in `*bdef-dictionary*' that point to this bdef."
-  (alexandria:when-let ((bdef (ensure-bdef bdef)))
+  (when-let ((bdef (ensure-bdef bdef)))
     (loop :for key :being :the hash-keys :of dictionary
        :using (hash-value value)
        :if (eq value bdef)
@@ -205,8 +205,8 @@ Note that this function will block if the specified metadata is one of the `*aut
 
 (defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) (start-frame 0))
   (let* ((file (bdef-key-cleanse object))
-         (bdef (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (alexandria:remove-from-plist args :backend))))
-    (alexandria:doplist (key function *auto-metadata*)
+         (bdef (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (remove-from-plist args :backend))))
+    (doplist (key function *auto-metadata*)
         (let ((k key)
               (f function))
           (setf (bdef-metadata bdef key)
@@ -233,7 +233,7 @@ Note that this function will block if the specified metadata is one of the `*aut
 
 (defun remove-auto-metadata (key)
   "Remove a previously-defined auto-metadata key."
-  (alexandria:remove-from-plistf *auto-metadata* key))
+  (remove-from-plistf *auto-metadata* key))
 
 (define-auto-metadata :onsets
   (unless (< (duration bdef) 1)
@@ -270,7 +270,7 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
         (let ((res (bdef-set key (if (bdef-get value)
                                      value
                                      (bdef-load value :num-channels num-channels :wavetable wavetable :start-frame start-frame)))))
-          (alexandria:doplist (key value metadata)
+          (doplist (key value metadata)
               (setf (bdef-metadata res key) value))
           res)
         (or (bdef-get key)
