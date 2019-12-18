@@ -2,9 +2,6 @@
 
 ;;; generics
 
-(defmethod play ((bdef bdef:bdef))
-  (play (bdef:bdef-buffer bdef)))
-
 (defmethod supercollider-convert-object ((bdef bdef:bdef) key)
   (declare (ignore key))
   (bdef::id (bdef:bdef-buffer bdef)))
@@ -15,6 +12,9 @@
     (if bdef
         (bdef::id (bdef:bdef-buffer bdef))
         object)))
+
+(defmethod play ((bdef bdef:bdef))
+  (play (bdef:bdef-buffer bdef)))
 
 (defmethod tempo ((bdef bdef:bdef))
   (bdef:bdef-metadata bdef :tempo))

@@ -65,6 +65,42 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 (defgeneric bdef-free-buffer (buffer)
   (:documentation "Free a buffer via its backend."))
 
+;;; auto-metadata
+
+(defvar *auto-metadata* (list)
+  "Plist of keys that will automatically be populated in a bdef's metadata for all newly-created or loaded buffers. The value for each key is the function that generates the value of the key for the bdef metadata. Use the `define-auto-metadata' macro or `set-auto-metadata' function to define auto-metadata keys, or `remove-auto-metadata' to remove them.")
+
+(defun set-auto-metadata (key function)
+  "Add KEY as an auto-metadata key for bdefs. FUNCTION will be run with the bdef as its argument, and the result will be set to the bdef's metadata for KEY."
+  (setf (getf *auto-metadata* key) function))
+
+(defmacro define-auto-metadata (key &body body)
+  "Define an auto-metadata key for bdefs. The variable BDEF will be bound in BODY to the bdef in question."
+  `(setf (getf *auto-metadata* ,key)
+         (lambda (bdef) ,@body)))
+
+(defun remove-auto-metadata (key)
+  "Remove a previously-defined auto-metadata key."
+  (remove-from-plistf *auto-metadata* key))
+
+(define-auto-metadata :onsets
+  (unless (< (duration bdef) 1)
+    (splits-from-aubio-onsets bdef)))
+
+(define-auto-metadata :tempo
+  (let* ((path (path bdef))
+         (bpm (or
+               (extract-bpm-from-string path)
+               (extract-bpm-from-file-metadata path)
+               (bpm-tools-bpm path))))
+    (when bpm
+      (/ bpm 60))))
+
+(define-auto-metadata :dur
+  (when (bdef-metadata bdef :tempo)
+    (round (* (bdef-metadata bdef :tempo)
+              (duration bdef)))))
+
 ;;; bdef
 
 (defclass bdef ()
@@ -217,41 +253,8 @@ Note that this function will block if the specified metadata is one of the `*aut
                      value))))))
     bdef))
 
-;;; auto-metadata
-
-(defvar *auto-metadata* (list)
-  "Plist of keys that will automatically be populated in a bdef's metadata for all newly-created or loaded buffers. The value for each key is the function that generates the value of the key for the bdef metadata. Use the `define-auto-metadata' macro or `set-auto-metadata' function to define auto-metadata keys, or `remove-auto-metadata' to remove them.")
-
-(defun set-auto-metadata (key function)
-  "Add KEY as an auto-metadata key for bdefs. FUNCTION will be run with the bdef as its argument, and the result will be set to the bdef's metadata for KEY."
-  (setf (getf *auto-metadata* key) function))
-
-(defmacro define-auto-metadata (key &body body)
-  "Define an auto-metadata key for bdefs. The variable BDEF will be bound in BODY to the bdef in question."
-  `(setf (getf *auto-metadata* ,key)
-         (lambda (bdef) ,@body)))
-
-(defun remove-auto-metadata (key)
-  "Remove a previously-defined auto-metadata key."
-  (remove-from-plistf *auto-metadata* key))
-
-(define-auto-metadata :onsets
-  (unless (< (duration bdef) 1)
-    (splits-from-aubio-onsets bdef)))
-
-(define-auto-metadata :tempo
-  (let* ((path (path bdef))
-         (bpm (or
-               (extract-bpm-from-string path)
-               (extract-bpm-from-file-metadata path)
-               (bpm-tools-bpm path))))
-    (when bpm
-      (/ bpm 60))))
-
-(define-auto-metadata :dur
-  (when (bdef-metadata bdef :tempo)
-    (round (* (bdef-metadata bdef :tempo)
-              (duration bdef)))))
+(defmethod no-applicable-method ((method (eql #'bdef-load)) &rest args)
+  (error "None of the enabled bdef backends support loading ~s." (cadr args)))
 
 ;; FIX: add 'metadata' key. it should probably add to the default metadata fields. if the user doesn't want them, they can provide 'nil' for the key they don't want generated.
 (defun bdef (key &optional (value nil value-provided-p) &key (num-channels 2) (wavetable nil) (start-frame 0) metadata) ;; FIX: start-frame key doesn't work yet
@@ -277,9 +280,6 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
             (if (symbolp key)
                 (error "No bdef with the key ~a defined." key)
                 (bdef-load key))))))
-
-(defmethod no-applicable-method ((method (eql #'bdef-load)) &rest args)
-  (error "None of the enabled bdef backends support loading ~s." (cadr args)))
 
 ;;; generics
 
