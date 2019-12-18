@@ -49,7 +49,7 @@
                  :bdef bdef
                  :metadata metadata))
 
-(defun %splits-ensure-unit (point)
+(defun %splits-ensure-point-type (point)
   "Ensure POINT is one of the splits point types."
   (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
   (ecase point
@@ -109,7 +109,7 @@
   (assert (typep splits 'splits) (splits))
   (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
   (assert (member unit (list :percent :sample :frame :second :percents :samples :frames :seconds)) (unit))
-  (let ((array (slot-value splits (%splits-ensure-unit point)))
+  (let ((array (slot-value splits (%splits-ensure-point-type point)))
         (conv-func (%splits-conversion-function splits (%splits-ensure-unit unit))))
     (if (or (null array)
             (eq 'identity conv-func))
@@ -138,7 +138,7 @@
   (let* ((splits (if (typep splits '(or bdef symbol))
                      (bdef-splits splits)
                      splits))
-         (array (slot-value splits (%splits-ensure-unit point)))
+         (array (slot-value splits (%splits-ensure-point-type point)))
          (conv-func (%splits-conversion-function splits unit)))
     (when (null array)
       (return-from splits-point nil))
