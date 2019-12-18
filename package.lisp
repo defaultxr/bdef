@@ -26,4 +26,5 @@
    #:splits-point
 
    #:splits-from-aubio-onsets
-   #:splits-from-audacity-labels))
+   #:splits-from-audacity-labels
+   #:audacity-labels-from-splits))

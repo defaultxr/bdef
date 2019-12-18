@@ -271,17 +271,31 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 (defun splits-from-audacity-labels (labels)
   "Make a `splits' from an Audacity labels file."
-  (typecase labels
-    (string (audacity-labels (pathname labels)))
-    (pathname
-     (with-open-file (stream labels :direction :input :if-does-not-exist :error)
-       (loop :for line = (read-line stream nil)
-          :while line
-          :for parsed = (split-sequence:split-sequence #\tab line :remove-empty-subseqs t)
-          :collect (parse-float:parse-float (car parsed)) :into starts
-          :collect (parse-float:parse-float (cadr parsed)) :into ends
-          :collect (caddr parsed) :into comments
-          :finally (return (make-splits starts :ends ends :comments comments :unit :seconds)))))))
+  (with-open-file (stream labels :direction :input :if-does-not-exist :error)
+    (loop :for line = (read-line stream nil)
+       :while line
+       :for parsed = (split-sequence:split-sequence #\tab line :remove-empty-subseqs t)
+       :collect (parse-float:parse-float (car parsed)) :into starts
+       :collect (parse-float:parse-float (cadr parsed)) :into ends
+       :collect (caddr parsed) :into comments
+       :finally (return (make-splits starts :ends ends :comments comments :unit :seconds)))))
+
+(defun audacity-labels-from-splits (splits &optional (file #P"~/label.txt"))
+  "Export a `splits' object as an Audacity labels file."
+  (labels ((writer (stream)
+             (loop :for idx :from 0 :below (length splits)
+                :for start = (splits-point splits idx :start :second)
+                :for end = (or (splits-point splits idx :end :second)
+                               (ignore-errors (splits-point splits (1+ idx) :start :second))
+                               (end-point splits :second))
+                :for comment = (splits-point splits idx :comment)
+                :do (format stream "~a~c~a~c~a~%" start #\tab end #\tab (or comment idx)))))
+    (etypecase file
+      ((or pathname string)
+       (with-open-file (stream file :direction :output :if-exists :supersede)
+         (writer stream)))
+      (stream
+       (writer file)))))
 
 ;;; op-1 drumsets
 ;; https://github.com/padenot/libop1/blob/master/src/op1_drum_impl.cpp
