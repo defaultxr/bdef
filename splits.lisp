@@ -21,9 +21,9 @@
   (/ samples sample-rate))
 
 ;;; splits
-;; FIX: can bdef be a subclass of sequence so that it can be used as the list input of prand, etc?
+;; FIX: add more extensible-sequences methods
 
-(defclass splits (standard-object #+sbcl sequence)
+(defclass splits (standard-object #+#.(cl:if (cl:find-package "SEQUENCE") '(:and) '(:or)) sequence)
   ((starts :initarg :starts :type (vector number) :documentation "The vector of split start points. If the \"end\" slot is non-nil, each start point will be matched with an end point in the \"end\" slot with the same index.")
    (ends :initarg :ends :initform nil :type (or null (vector number)) :documentation "The vector of split end points, or NIL if no end points are defined.")
    (loops :initarg :loops :initform nil :type (or null (vector number)) :documentation "The vector of split loop points, or NIL if no loop points are defined.")
@@ -94,7 +94,7 @@
     (bdef
      (splits-length (bdef-splits object)))))
 
-#+sbcl
+#+#.(cl:if (cl:find-package "SEQUENCE") '(:and) '(:or))
 (defmethod sequence:length ((this splits))
   (splits-length this))
 
