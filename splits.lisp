@@ -89,6 +89,8 @@
 (defun splits-length (object)
   "Get the number of splits defined in OBJECT."
   (etypecase object
+    (symbol
+     (splits-length (bdef object)))
     (splits
      (length (slot-value object 'starts)))
     (bdef
@@ -193,6 +195,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 (defparameter *aubio-python-directory* #P"~/misc/aubio/python/demos/")
 
+;; FIX: maybe just make a general function for all the aubio commands?
 (defun aubio-onsets-read (file &rest args &key (algorithm :default) (threshold 0.3) (silence -90) &allow-other-keys)
   "Use the \"aubioonset\" utility to get a list of onsets in FILE. FILE can be a path to a file or a cl-collider buffer object. The returned list gives onsets in seconds from the start of the file."
   (declare (ignore algorithm threshold silence args)) ;; FIX: actually implement these arguments
@@ -213,10 +216,24 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 (defun splits-from-aubio-onsets (file &rest args &key &allow-other-keys) ;; FIX: make sure this works with bdefs
   (apply 'make-splits
-         (coerce (apply 'aubio-onsets-read file args) 'vector) ;; FIX: just generate as a vector
+         (coerce (apply 'aubio-onsets-read file args) 'vector) ;; FIX: just generate as a vector?
          :unit :seconds
          (when (typep file 'bdef)
            (list :bdef file))))
+
+(defun splits-from-aubio-track (file &key (buf-size 512) (hop-size 256) (silence-threshold -90)) ;; FIX: make a more general aubio function for any of its commands?
+  (make-splits (mapcar 'parse-float:parse-float
+                       (split-sequence:split-sequence
+                        #\newline
+                        (uiop:run-program (list "aubiotrack"
+                                                "-i" (namestring (truename file))
+                                                "-B" (write-to-string buf-size)
+                                                "-H" (write-to-string hop-size)
+                                                "-s" (write-to-string silence-threshold)
+                                                "-T" "samples")
+                                          :output '(:string :stripped t))
+                        :remove-empty-subseqs t))
+               :unit :samples))
 
 (defun aubio-demo-bpm (file &key (mode :default))
   "Use aubio's demo_bpm_extract.py to get the bpm of FILE."
@@ -240,7 +257,29 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
               (split (uiop:run-program (list "python" (namestring (merge-pathnames *aubio-python-directory* "demo-tempo.py")) (namestring (truename file)))
                                        :output '(:string :stripped t)))))))
 
-(defun aubio-track-to-audacity-labels (file)
+(defgeneric splits-export (splits file format)
+  (:documentation "Write a `splits' object to a file in another format."))
+
+(defmethod splits-export ((bdef bdef) file format)
+  (splits-export (bdef-splits bdef) file format))
+
+(defmethod splits-export (object (file string) format)
+  (with-open-file (stream file :direction :output :if-exists :supersede)
+    (splits-export object stream format)))
+
+(defmethod splits-export (object (file pathname) format)
+  (splits-export object (namestring (truename file)) format))
+
+(defmethod splits-export ((splits splits) (stream stream) (format (eql :audacity)))
+  (loop :for idx :from 0 :below (length splits)
+     :for start = (splits-point splits idx :start :second)
+     :for end = (or (splits-point splits idx :end :second)
+                    (ignore-errors (splits-point splits (1+ idx) :start :second)) ;; FIX: just use ensure-end, (or maybe integrate ensure-end into the regular splits-ends function?)
+                    (end-point splits :second))
+     :for comment = (splits-point splits idx :comment)
+     :do (format stream "~a~c~a~c~a~%" start #\tab end #\tab (or comment idx))))
+
+(defun aubio-track-to-audacity-labels (file) ;; FIX: remove this and just make a function to generate a `splits' from aubiotrack, since `audacity-labels-from-splits' already exists.
   "Generate an Audacity labels file from the output of aubio's aubiotrack on FILE."
   (let ((beats-times (mapcar 'parse-float:parse-float
                              (split-sequence:split-sequence
@@ -299,6 +338,72 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 ;;; op-1 drumsets
 ;; https://github.com/padenot/libop1/blob/master/src/op1_drum_impl.cpp
+
+(defconstant +op-1-drumkit-end+ #x7FFFFFFE)
+
+(defconstant +op-1-bytes-in-12-sec+ (* 44100 2 12))
+
+(defconstant +size-of-uint16-t+ 2)
+
+(defun frame-to-op-1-format (frame)
+  "Convert a frame number to the OP-1 split point format.
+
+See also: `op-1-format-to-frame'"
+  (round
+   (/ +op-1-drumkit-end+
+      (* +op-1-bytes-in-12-sec+ frame +size-of-uint16-t+))))
+
+(defun op-1-format-to-frame (op-1-split)
+  "Convert a number in OP-1 split point format to a frame number.
+
+See also: `frame-to-op-1-format'."
+  (round (/ (* (/ op-1-split +op-1-drumkit-end+)
+               +size-of-uint16-t+ +op-1-bytes-in-12-sec+)
+            4)))
+
+(defun frame-to-op-1-format.new (frame)
+  "Convert a frame number to the OP-1 split point format.
+
+See also: `op-1-format-to-frame'"
+  (round
+   (* (/ +op-1-drumkit-end+
+         +op-1-bytes-in-12-sec+)
+      frame +size-of-uint16-t+)))
+
+(defun op-1-format-to-frame.new (op-1)
+  "Convert a frame number to the OP-1 split point format.
+
+See also: `op-1-format-to-frame'"
+  (round
+   (* (/ +op-1-bytes-in-12-sec+
+         +op-1-drumkit-end+)
+      op-1 +size-of-uint16-t+)))
+
+#|
+(defun splits-from-op-1-drumset (drumset)
+"Make a `splits' from an OP-1 format drumset."
+(etypecase drumset
+(bdef
+(let ((splits (splits-from-op-1-drumset (path drumset))))
+(setf (splits-bdef splits) drumset)
+splits))
+(string
+(with-open-file (stream drumset :direction :input)
+(let ((array (make-array 4 :initial-element nil)))
+(loop :for peek = (peek-char stream nil nil)
+:if (null peek)
+:do (progn
+(print 'couldnt-find-it)
+(loop-finish))
+:if (char= #\o peek)
+:do (progn
+(read-sequence array stream)
+(when (equalp #(#\o #\p #\- #\1) array)
+(print 'found-it)))
+:do (read-char stream nil nil)))
+;; (make-splits starts :ends ends :unit :frames)
+))))
+|#
 
 ;;; snd marks
 ;; TODO
