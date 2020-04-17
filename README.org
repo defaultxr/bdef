@@ -110,7 +110,7 @@ Enable the cl-collider backend like so:
 (bdef-metadata (bdef "~/my-file-128bpm.wav") :tempo) ;; => 32/15 (128bpm in beats per second)
 #+END_SRC
 
-You can also add your own auto-metadata keys with the ~define-auto-metadata~ macro or ~set-auto-metadata~ function, or remove them with the ~remove-auto-metadata~ function.
+You can also add your own auto-metadata keys with the ~define-bdef-auto-metadata~ macro or ~set-bdef-auto-metadata~ function, or remove them with the ~remove-bdef-auto-metadata~ function.
 
 Additional metadata is loaded asynchronously in background threads using futures from the [[https://common-lisp.net/project/eager-future/][eager-future2]] library. If a requested metadatum is still being generated, ~bdef-metadata~ will block until the result is available.
 

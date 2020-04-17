@@ -15,9 +15,9 @@
    #:bdef-splits
    #:bdef-free
 
-   #:define-auto-metadata
-   #:set-auto-metadata
-   #:remove-auto-metadata
+   #:define-bdef-auto-metadata
+   #:set-bdef-auto-metadata
+   #:remove-bdef-auto-metadata
 
    #:splits
    #:make-splits

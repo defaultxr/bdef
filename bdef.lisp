@@ -67,27 +67,27 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 
 ;;; auto-metadata
 
-(defvar *auto-metadata* (list)
-  "Plist of keys that will automatically be populated in a bdef's metadata for all newly-created or loaded buffers. The value for each key is the function that generates the value of the key for the bdef metadata. Use the `define-auto-metadata' macro or `set-auto-metadata' function to define auto-metadata keys, or `remove-auto-metadata' to remove them.")
+(defvar *bdef-auto-metadata* (list)
+  "Plist of keys that will automatically be populated in a bdef's metadata for all newly-created or loaded buffers. The value for each key is the function that generates the value of the key for the bdef metadata. Use the `define-bdef-auto-metadata' macro or `set-bdef-auto-metadata' function to define bdef-auto-metadata keys, or `remove-bdef-auto-metadata' to remove them.")
 
-(defun set-auto-metadata (key function)
+(defun set-bdef-auto-metadata (key function)
   "Add KEY as an auto-metadata key for bdefs. FUNCTION will be run with the bdef as its argument, and the result will be set to the bdef's metadata for KEY."
-  (setf (getf *auto-metadata* key) function))
+  (setf (getf *bdef-auto-metadata* key) function))
 
-(defmacro define-auto-metadata (key &body body)
+(defmacro define-bdef-auto-metadata (key &body body)
   "Define an auto-metadata key for bdefs. The variable BDEF will be bound in BODY to the bdef in question."
-  `(setf (getf *auto-metadata* ,key)
+  `(setf (getf *bdef-auto-metadata* ,key)
          (lambda (bdef) ,@body)))
 
-(defun remove-auto-metadata (key)
+(defun remove-bdef-auto-metadata (key)
   "Remove a previously-defined auto-metadata key."
-  (remove-from-plistf *auto-metadata* key))
+  (remove-from-plistf *bdef-auto-metadata* key))
 
-(define-auto-metadata :onsets
+(define-bdef-auto-metadata :onsets
   (unless (< (duration bdef) 1)
     (splits-from-aubio-onsets bdef)))
 
-(define-auto-metadata :tempo
+(define-bdef-auto-metadata :tempo
   (let* ((path (path bdef))
          (bpm (or
                (extract-bpm-from-string path)
@@ -96,7 +96,7 @@ Note that backends are made available by loading the relevant bdef subsystem wit
     (when bpm
       (/ bpm 60))))
 
-(define-auto-metadata :dur
+(define-bdef-auto-metadata :dur
   (when (bdef-metadata bdef :tempo)
     (round (* (bdef-metadata bdef :tempo)
               (duration bdef)))))
@@ -171,7 +171,7 @@ Note that this doesn't include aliases (i.e. bdef keys that point to another key
 (defun bdef-metadata (bdef key)
   "Get the value of BDEF's metadata for KEY. Returns true as a second value if the metadata had an entry for KEY, or false if it did not.
 
-Note that this function will block if the specified metadata is one of the `*auto-metadata*' that hasn't finished being generated yet."
+Note that this function will block if the specified metadata is one of the `*bdef-auto-metadata*' that hasn't finished being generated yet."
   (let ((bdef (ensure-bdef bdef)))
     (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
       (values
@@ -242,7 +242,7 @@ Note that this function will block if the specified metadata is one of the `*aut
 (defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) (start-frame 0))
   (let* ((file (bdef-key-cleanse object))
          (bdef (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (remove-from-plist args :backend))))
-    (doplist (key function *auto-metadata*)
+    (doplist (key function *bdef-auto-metadata*)
         (let ((k key)
               (f function))
           (setf (bdef-metadata bdef key)
