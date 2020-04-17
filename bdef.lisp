@@ -101,6 +101,34 @@ Note that backends are made available by loading the relevant bdef subsystem wit
     (round (* (bdef-metadata bdef :tempo)
               (duration bdef)))))
 
+;;; dynamic metadata
+
+(defvar *bdef-dynamic-metadata* nil
+  "Alist of dynamic metadata keys and their get and set functions.")
+
+(defmacro define-bdef-dynamic-metadata (key get-body set-body)
+  "Define a metadata key that is calculated dynamically. For example, bpm is just tempo multiplied by 60.
+
+KEY is the name of the key, GET-BODY is the function to run to get the key, and SET-BODY is the function to run to set metadata when (setf (bdef-metadata bdef KEY) ...) is called.
+
+See also: `define-bdef-auto-metadata', `bdef-metadata'"
+  `(push (list (make-keyword ',key)
+               (lambda (bdef) ,get-body)
+               (lambda (bdef value) ,set-body))
+         *bdef-dynamic-metadata*))
+
+(define-bdef-dynamic-metadata bpm
+    (when-let ((tempo (bdef-metadata bdef :tempo)))
+      (* 60 tempo))
+  (setf (bdef-metadata bdef :tempo) (/ value 60)))
+
+(defun remove-bdef-dynamic-metadata (key)
+  "Remove a key from the bdef dynamic metadata list."
+  (let ((key (make-keyword key)))
+    (setf *bdef-dynamic-metadata* (remove-if
+                                   (lambda (item) (eql (car item) key))
+                                   *bdef-dynamic-metadata*))))
+
 ;;; bdef
 
 (defclass bdef ()
@@ -173,22 +201,27 @@ Note that this doesn't include aliases (i.e. bdef keys that point to another key
 
 Note that this function will block if the specified metadata is one of the `*bdef-auto-metadata*' that hasn't finished being generated yet."
   (let ((bdef (ensure-bdef bdef)))
-    (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
-      (values
-       (if val
-           (if (typep val 'eager-future2:future)
-               (setf (bdef-metadata bdef key) (eager-future2:yield val))
-               val)
-           val)
-       present-p))))
+    (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
+      (funcall (cadr dyn-meta) bdef)
+      (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
+        (values
+         (if val
+             (if (typep val 'eager-future2:future)
+                 (setf (bdef-metadata bdef key) (eager-future2:yield val))
+                 val)
+             val)
+         present-p)))))
 
 (defun (setf bdef-metadata) (value bdef key)
   ;; if VALUE is a splits object and its `splits-bdef' is nil, set it to point to this bdef.
   (let ((bdef (ensure-bdef bdef)))
-    (when (and (typep value 'splits)
-               (null (funcall 'splits-bdef value)))
-      (setf (splits-bdef value) bdef))
-    (setf (gethash key (slot-value bdef 'metadata)) value)))
+    (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
+      (funcall (caddr dyn-meta) bdef value)
+      (progn
+        (when (and (typep value 'splits)
+                   (null (funcall 'splits-bdef value)))
+          (setf (splits-bdef value) bdef))
+        (setf (gethash key (slot-value bdef 'metadata)) value)))))
 
 (defun bdef-metadata-keys (bdef)
   "Get a list of all keys in BDEF's metadata."

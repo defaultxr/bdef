@@ -99,20 +99,38 @@ Enable the cl-collider backend like so:
 ** Allows metadata about the buffer to be stored:
 
 #+BEGIN_SRC lisp
-(setf (bdef-metadata (bdef :snd) :tempo) (/ 99 60)) ;; set :snd's tempo to 99 BPM.
+(setf (bdef-metadata (bdef :snd) :bpm) 99) ;; set :snd's tempo to 99 BPM.
 
-(bdef-metadata (bdef :snd) :tempo) ;; get the stored tempo value.
+(bdef-metadata (bdef :snd) :bpm) ;; get the stored bpm value.
 #+END_SRC
 
-** Automatically gets various metadata for a file when available:
+** Automatically set various metadata when a bdef is created:
 
 #+BEGIN_SRC lisp
-(bdef-metadata (bdef "~/my-file-128bpm.wav") :tempo) ;; => 32/15 (128bpm in beats per second)
+;; load a file with its bpm in its filename:
+(bdef :my-file "~/my-file-128bpm.wav")
+
+;; the bpm is automatically stored as metadata:
+(bdef-metadata :my-file :bpm) ;; => 128
 #+END_SRC
 
 You can also add your own auto-metadata keys with the ~define-bdef-auto-metadata~ macro or ~set-bdef-auto-metadata~ function, or remove them with the ~remove-bdef-auto-metadata~ function.
 
 Additional metadata is loaded asynchronously in background threads using futures from the [[https://common-lisp.net/project/eager-future/][eager-future2]] library. If a requested metadatum is still being generated, ~bdef-metadata~ will block until the result is available.
+
+** Automatically generate metadata from functions:
+
+#+BEGIN_SRC lisp
+(setf (bdef-metadata :foo :bpm) 142) ;; sets the "tempo" metadata key instead to its beats per minute value
+
+;; tempo is stored as beats per second:
+(bdef-metadata :foo :tempo) ;; => 71/30 (142 beats per minute in beats per second)
+
+;; beats per minute is still available, dynamically calculated from the tempo key:
+(bdef-metadata :foo :bpm) ;; => 142
+#+END_SRC
+
+You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 
 ** "Splits" functionality to define split points or regions in buffers:
 
