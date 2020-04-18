@@ -4,7 +4,69 @@
 
 Basically, this simplifies buffer management in [[https://github.com/byulparan/cl-collider][cl-collider]], making them easier to use.
 
-*Note:* Previously at the URL for this repository was Bdef for SuperCollider. That repository has since moved [[https://github.com/defaultxr/supercollider-bdef][here]].
+*Note:* Previously Bdef for SuperCollider was hosted at this URL. That repository has since moved [[https://github.com/defaultxr/supercollider-bdef][here]].
+
+* Intro
+
+Bdef is available from Quicklisp, so you can simply Quickload it:
+
+#+BEGIN_SRC lisp
+(ql:quickload :bdef)
+#+END_SRC
+
+It also has multiple sub-systems for integration with various other libraries. So if you use cl-patterns, cl-collider, or Incudine you may want to load ~bdef/cl-patterns~ and/or the other sub-systems:
+
+#+BEGIN_SRC lisp
+;; integration with cl-patterns and cl-collider:
+(ql:quickload '(bdef/cl-patterns bdef/cl-collider))
+#+END_SRC
+
+To load a buffer from a file, provide the path to the ~bdef~ function:
+
+#+BEGIN_SRC lisp
+(bdef "~/path/to/your/buffer.mp3")
+
+;; you can also give it an alias:
+(bdef :foo "/path/to/buffer.wav")
+
+;; the buffer can then be referred to with it:
+(bdef :foo)
+#+END_SRC
+
+~bdef~ returns a bdef object which can be provided in place of a buffer for any functions that expect it, as long as you've quickloaded the proper bdef sub-system for the library those functions are from. For example:
+
+#+BEGIN_SRC lisp
+;; cl-collider:
+(synth :playbuf :buffer (bdef :foo)) ;; will work if you've loaded the bdef/cl-collider system.
+
+;; cl-patterns:
+(play (event :instrument :playbuf :buffer :foo)) ;; will work if you've loaded the bdef/cl-patterns system.
+;; Notice that you can just specify the bdef name as a symbol without even having to use the bdef function! The same is true in patterns too.
+#+END_SRC
+
+Metadata can be associated with bdefs for various uses:
+
+#+BEGIN_SRC lisp
+(setf (bdef-metadata :foo :bpm) 120) ;; set the "bpm" metadatum to 120
+#+END_SRC
+
+Some metadata is automatically generated; for example, the tempo may be automatically detected from the filename or id3 tags.
+
+bdef includes functionality for defining buffer regions called ~splits~. This is useful, for instance, to divide a drum loop up by each hit, or to divide up a source track into sections based on onsets or beats.
+
+#+BEGIN_SRC lisp
+;; define three consecutive regions, one second long each:
+(make-splits (list (list 0 1) (list 1 2) (list 2 3)) :unit :seconds)
+
+;; auto-generate splits from sound onsets in a file using the aubio library:
+(splits-from-aubio-onsets "/path/to/file.wav")
+#+END_SRC
+
+[[https://aubio.org][Aubio]] is an external library of audio analysis functions. If installed, splits can be automatically generated from its analyses.
+
+Functionality for importing/exporting audio splits/regions to other programs are in the works as well: OP-1 drumsets, Audacity labels, Renoise regions, etc.
+
+See the following section for detail on more features of the bdef library.
 
 * Features
 
@@ -169,3 +231,5 @@ You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 - Right now, ~cl-collider~ is the only supported backend. In the future, [[http://incudine.sourceforge.net/][Incudine]] should work as well.
 - Support for configurable pathname shortcuts. (i.e. set ~foo~ as a shortcut to ~/a/long/path/name/~, then provide ~"foo/bar.wav"~ instead of ~"/a/long/path/name/bar.wav"~.)
 - Loading with ~num-channels~ set to 1 loads only the first channel. Might make more sense to mix all channels down to mono, perhaps as an option.
+- Auto-generate splits by dividing a file into N parts, or divide every N seconds/frames/etc. Also make it possible to apply this only to a specific section of the file (i.e. if a track has multiple tempos).
+- "Dynamic" splits; i.e. defing a set of splits as "this region in four equal-length pieces" rather than immediately "baking" generated splits as a list of specific points.
