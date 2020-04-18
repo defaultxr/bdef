@@ -33,3 +33,13 @@
   :depends-on (#:bdef
                #:cl-collider)
   :components ((:file "cl-collider")))
+
+(asdf:defsystem #:bdef/incudine
+  :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with Incudine functionality)."
+  :author "modula t. <defaultxr at gmail dot com>"
+  :license "MIT"
+  :version "0.6"
+  :serial t
+  :depends-on (#:bdef
+               #:incudine)
+  :components ((:file "incudine")))
