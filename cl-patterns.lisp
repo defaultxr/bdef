@@ -1,16 +1,29 @@
 (in-package #:cl-patterns)
 
+(endpushnew *dictionary-lookup-functions* 'bdef:bdef)
+
 ;;; generics
 
-(defmethod supercollider-convert-object ((bdef bdef:bdef) key)
+(defmethod backend-convert-object ((bdef bdef:bdef) key (backend (eql :supercollider)))
   (declare (ignore key))
   (bdef::id (bdef:bdef-buffer bdef)))
 
-(defmethod supercollider-convert-object ((object symbol) key)
+(defmethod backend-convert-object ((bdef bdef:bdef) key (backend (eql :incudine)))
+  (declare (ignore key))
+  (bdef:bdef-buffer bdef))
+
+(defmethod backend-convert-object ((object symbol) key (backend (eql :supercollider)))
   (declare (ignore key))
   (let ((bdef (bdef::bdef-get object)))
     (if bdef
         (bdef::id (bdef:bdef-buffer bdef))
+        object)))
+
+(defmethod backend-convert-object ((object symbol) key (backend (eql :incudine)))
+  (declare (ignore key))
+  (let ((bdef (bdef::bdef-get object)))
+    (if bdef
+        (bdef:bdef-buffer bdef)
         object)))
 
 (defmethod play ((bdef bdef:bdef))
@@ -24,21 +37,27 @@
 
 ;;; splits
 
-(defun bdef::splits-event (splits split &key end-split (unit :percent))
-  "Get an `event' for a `bdef:splits' split."
+(in-package #:bdef)
+
+(defun splits-event (splits split &key end-split (unit :percent))
+  "Get an `event' for a `splits' split."
   (flet ((ensure-end (end-split unit)
-           (or (bdef::splits-point splits end-split :end unit)
+           (or (splits-point splits end-split :end unit)
                (let ((ns (1+ end-split)))
-                 (when (< ns (bdef::splits-length splits))
-                   (bdef::splits-point splits (1+ end-split) :start unit)))
-               (bdef::end-point splits unit))))
+                 (when (< ns (splits-length splits))
+                   (splits-point splits (1+ end-split) :start unit)))
+               (end-point splits unit))))
     (let* ((end-split (or end-split split))
-           (start (bdef::splits-point splits split :start unit))
+           (start (splits-point splits split :start unit))
            (end (ensure-end end-split unit)))
-      (event :start start :end end
-             :dur (time-dur (abs (- (ensure-end end-split :seconds)
-                                    (bdef::splits-point splits split :start :seconds)))
-                            (event-value *event* :tempo))))))
+      (cl-patterns:event :start start :end end
+             :dur (cl-patterns:time-dur (abs (- (ensure-end end-split :seconds)
+                                    (splits-point splits split :start :seconds)))
+                            (cl-patterns:event-value cl-patterns:*event* :tempo))))))
+
+(export '(splits-event))
+
+(in-package #:cl-patterns)
 
 (defpattern psplits ()
   ((splits :default nil)
