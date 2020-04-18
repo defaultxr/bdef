@@ -12,7 +12,8 @@
                #:eager-future2)
   :components ((:file "package")
                (:file "bdef")
-               (:file "splits")))
+               (:file "splits"))
+  :in-order-to ((test-op (test-op "bdef/tests"))))
 
 (asdf:defsystem #:bdef/cl-patterns
   :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with cl-patterns functionality)."
@@ -43,3 +44,17 @@
   :depends-on (#:bdef
                #:incudine)
   :components ((:file "incudine")))
+
+(asdf:defsystem #:bdef/tests
+  :name "bdef/tests"
+  :author "modula t. <defaultxr@gmail.com>"
+  :description "FiveAM-based tests suite for bdef."
+  :license "MIT"
+  :depends-on (#:bdef
+               #:mutility
+               #:fiveam)
+  :components ((:file "tests"))
+  :perform (test-op (op c)
+                    (uiop:symbol-call :fiveam :run!
+                                      (uiop:find-symbol* '#:bdef-tests
+                                                         :bdef/tests))))
