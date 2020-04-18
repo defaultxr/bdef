@@ -275,12 +275,14 @@ Note that this function will block if the specified metadata is one of the `*bde
 
 - num-channels - Number of channels to load (defaults to 2).
 - wavetable - Whether to load the object in wavetable format. If T, the buffer length will be the next power of two. If a number is provided, load the object as a wavetable of that size.
-- start-frame - Skip this many frames from the start of the file when loading it."))
+- start-frame - Skip this many frames from the start of the file when loading it.
+- metadata - Plist of metadata to include in the bdef."))
 
-(defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) (start-frame 0))
+(defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) (start-frame 0) metadata)
   (let* ((file (bdef-key-cleanse object))
          (bdef (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (remove-from-plist args :backend))))
     (doplist (key function *bdef-auto-metadata*)
+      (unless (getf metadata key)
         (let ((k key)
               (f function))
           (setf (bdef-metadata bdef key)
@@ -288,7 +290,9 @@ Note that this function will block if the specified metadata is one of the `*bde
                  (lambda ()
                    (let ((value (funcall f bdef)))
                      (setf (bdef-metadata bdef k) value)
-                     value))))))
+                     value)))))))
+    (doplist (key value metadata)
+      (setf (bdef-metadata bdef key) value))
     bdef))
 
 (defmethod no-applicable-method ((method (eql #'bdef-load)) &rest args)
