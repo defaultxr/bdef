@@ -230,10 +230,11 @@ Note that this function will block if the specified metadata is one of the `*bde
 (defun bdef-splits (bdef)
   "Get any `splits' from BDEF's metadata, searching in preferred order (i.e. :splits key first, etc)."
   (let ((bdef (ensure-bdef bdef)))
-    (loop :for key :in (list :splits :onsets) ;; FIX: check other keys too?
-       :for val = (bdef-metadata bdef key)
-       :if val
-       :return val)))
+    (loop
+      :for key :in (list :splits :onsets) ;; FIX: check other keys too?
+      :for val = (bdef-metadata bdef key)
+      :if val
+        :return val)))
 
 (defun (setf bdef-splits) (splits bdef)
   (setf (bdef-metadata (ensure-bdef bdef) :splits) splits))
@@ -241,10 +242,14 @@ Note that this function will block if the specified metadata is one of the `*bde
 (defun bdef-keys-pointing-to (bdef &optional (dictionary *bdef-dictionary*))
   "Get a list of all the keys in `*bdef-dictionary*' that point to this bdef."
   (when-let ((bdef (ensure-bdef bdef)))
-    (loop :for key :being :the hash-keys :of dictionary
-       :using (hash-value value)
-       :if (eq value bdef)
-       :collect key)))
+    (loop
+      :for key :being :the hash-keys :of dictionary
+        :using (hash-value value)
+      :if (eq value bdef)
+        :collect key)))
+
+(defgeneric bdef-buffer (object)
+  (:documentation "The actual buffer object that the bdef refers to."))
 
 (defmethod bdef-buffer ((symbol symbol))
   (bdef-buffer (ensure-bdef symbol)))
