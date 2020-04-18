@@ -27,9 +27,8 @@
                                          :bufnum bufnum
                                          :server server))))
 
-(defmethod bdef-backend-load ((backend (eql :cl-collider)) (object string) &key (num-channels 2) (wavetable nil) (start-frame 0))
-  (let* ((file (bdef-key-cleanse object))
-         (buffer (sc-buffer-read-any file :num-channels num-channels :wavetable wavetable :start-frame start-frame))
+(defmethod bdef-backend-load ((backend (eql :cl-collider)) (file string) &key (num-channels 2) (wavetable nil) (start-frame 0))
+  (let* ((buffer (sc-buffer-read-any file :num-channels num-channels :wavetable wavetable :start-frame start-frame))
          (bdef (make-instance 'bdef
                               :key file
                               :buffer buffer)))
