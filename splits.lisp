@@ -37,17 +37,38 @@
   (format stream "#<~a~@[ :BDEF ~a~]>" 'splits (splits-bdef this)))
 
 (defun make-splits (starts &key ends loops comments (unit :percents) bdef metadata)
-  "Make a `splits' object."
+  "Make a `splits' object. Ends, loops, and comments for each split can be specified with the keyword arguments or as sublists in STARTS.
+
+Examples:
+
+;; (make-splits (list (list 0 1 \"first split\") (list 1 2 \"second split\")) :unit seconds)
+;; ;; ...is equivalent to:
+;; (make-splits (list 0 1) :ends (list 1 2) :comments (list \"first split\" \"second split\") :unit :seconds)
+
+See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loops', `splits-comments'"
   (assert (member unit (list :percents :samples :seconds)) (unit))
   (assert (typep bdef '(or null bdef)))
-  (make-instance 'splits
-                 :starts (coerce starts 'vector)
-                 :ends (when ends (coerce ends 'vector))
-                 :loops (when loops (coerce loops 'vector))
-                 :comments (when comments (coerce comments 'vector))
-                 :unit unit
-                 :bdef bdef
-                 :metadata metadata))
+  (let* ((list (mapcar #'ensure-list starts))
+         (comments (or comments (mapcar (lambda (item)
+                                          (car (remove-if-not
+                                                (lambda (x) (or (stringp x)
+                                                                (symbolp x)))
+                                                item)))
+                                        list)))
+         (list (remove-if #'stringp list))
+         (ends (or ends (mapcar #'cadr list)))
+         (ends (if (find-if-not #'null ends) ends nil))
+         (loops (or loops (mapcar #'caddr list)))
+         (loops (if (find-if-not #'null loops) loops nil))
+         (starts (mapcar #'car list)))
+    (make-instance 'splits
+                   :starts (coerce starts 'vector)
+                   :ends (when ends (coerce ends 'vector))
+                   :loops (when loops (coerce loops 'vector))
+                   :comments (when comments (coerce comments 'vector))
+                   :unit unit
+                   :bdef bdef
+                   :metadata metadata)))
 
 (defun %splits-ensure-point-type (point)
   "Ensure POINT is one of the splits point types."
