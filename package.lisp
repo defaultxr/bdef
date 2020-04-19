@@ -15,6 +15,9 @@
    #:bdef-splits
    #:bdef-free
 
+   #:bdef-elt
+   #:bdef-range
+
    #:define-bdef-auto-metadata
    #:set-bdef-auto-metadata
    #:remove-bdef-auto-metadata

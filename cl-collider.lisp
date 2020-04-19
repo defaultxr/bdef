@@ -59,6 +59,10 @@
 (defmethod bdef-free-buffer ((buffer cl-collider::buffer))
   (cl-collider:buffer-free buffer))
 
+(defmethod bdef-range ((buffer cl-collider::buffer) start end &optional channel)
+  ;; FIX: implement CHANNEL
+  (cl-collider:buffer-get-to-list buffer start (- end start)))
+
 ;;; generics
 
 (defmethod cl-collider:bufnum ((bdef bdef))
