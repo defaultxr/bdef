@@ -254,6 +254,12 @@ Note that this function will block if the specified metadata is one of the `*bde
 (defmethod bdef-buffer ((symbol symbol))
   (bdef-buffer (ensure-bdef symbol)))
 
+(defgeneric bdef-length (bdef)
+  (:documentation "Get the length of the bdef in frames."))
+
+(defmethod bdef-length (bdef)
+  (bdef-length (bdef-buffer bdef)))
+
 (defgeneric bdef-elt (bdef index &optional channel)
   (:documentation "Get the value of the bdef frame at INDEX. Without CHANNEL, return an array of the specified index in all channels. With CHANNEL, return just the value as a number.
 
@@ -262,13 +268,13 @@ See also: `bdef-subseq'"))
 (defmethod bdef-elt (buffer index &optional channel)
   (aref (bdef-subseq buffer index index channel) 0))
 
-(defgeneric bdef-subseq (bdef start end &optional channel)
+(defgeneric bdef-subseq (bdef start &optional end channel)
   (:documentation "Get the value of the bdef frames from START to END, inclusive. Returns an array of arrays, of all of the buffer's channels, unless a channel is specified with the CHANNEL argument.
 
 See also: `bdef-elt'"))
 
-(defmethod bdef-subseq (bdef start end &optional channel)
-  (bdef-subseq (bdef-buffer bdef) start end channel))
+(defmethod bdef-subseq (bdef start &optional end channel)
+  (bdef-subseq (bdef-buffer bdef) start (or end (bdef-length bdef)) channel))
 
 (defun bdef-free (bdef &optional (dictionary *bdef-dictionary*))
   "Free a buffer from the bdef dictionary, removing all keys that point to it."

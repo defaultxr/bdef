@@ -14,7 +14,7 @@
    #:bdef-metadata-keys
    #:bdef-splits
    #:bdef-free
-
+   #:bdef-length
    #:bdef-elt
    #:bdef-subseq
 

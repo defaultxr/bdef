@@ -59,9 +59,13 @@
 (defmethod bdef-free-buffer ((buffer cl-collider::buffer))
   (cl-collider:buffer-free buffer))
 
-(defmethod bdef-subseq ((buffer cl-collider::buffer) start end &optional channel) ;; FIX: this doesn't get all channels (this needs to be fixed in cl-collider)
+(defmethod bdef-length ((buffer cl-collider::buffer))
+  (cl-collider:frames buffer))
+
+(defmethod bdef-subseq ((buffer cl-collider::buffer) start &optional end channel) ;; FIX: this doesn't get all channels (this needs to be fixed in cl-collider)
   ;; FIX: implement CHANNEL
-  (coerce (cl-collider:buffer-get-to-list buffer start (- end start)) 'vector))
+  (let ((end (or end (frames buffer))))
+    (coerce (cl-collider:buffer-get-to-list buffer start (- end start)) 'vector)))
 
 ;;; generics
 
