@@ -59,9 +59,9 @@
 (defmethod bdef-free-buffer ((buffer cl-collider::buffer))
   (cl-collider:buffer-free buffer))
 
-(defmethod bdef-range ((buffer cl-collider::buffer) start end &optional channel)
+(defmethod bdef-subseq ((buffer cl-collider::buffer) start end &optional channel) ;; FIX: this doesn't get all channels (this needs to be fixed in cl-collider)
   ;; FIX: implement CHANNEL
-  (cl-collider:buffer-get-to-list buffer start (- end start)))
+  (coerce (cl-collider:buffer-get-to-list buffer start (- end start)) 'vector))
 
 ;;; generics
 

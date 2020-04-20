@@ -257,18 +257,18 @@ Note that this function will block if the specified metadata is one of the `*bde
 (defgeneric bdef-elt (bdef index &optional channel)
   (:documentation "Get the value of the bdef frame at INDEX. Without CHANNEL, return an array of the specified index in all channels. With CHANNEL, return just the value as a number.
 
-See also: `bdef-range'"))
+See also: `bdef-subseq'"))
 
 (defmethod bdef-elt (buffer index &optional channel)
-  (aref (bdef-range buffer index index channel) 0))
+  (aref (bdef-subseq buffer index index channel) 0))
 
-(defgeneric bdef-range (bdef start end &optional channel)
+(defgeneric bdef-subseq (bdef start end &optional channel)
   (:documentation "Get the value of the bdef frames from START to END, inclusive. Returns an array of arrays, of all of the buffer's channels, unless a channel is specified with the CHANNEL argument.
 
 See also: `bdef-elt'"))
 
-(defmethod bdef-range (bdef start end &optional channel)
-  (bdef-range (bdef-buffer bdef) start end channel))
+(defmethod bdef-subseq (bdef start end &optional channel)
+  (bdef-subseq (bdef-buffer bdef) start end channel))
 
 (defun bdef-free (bdef &optional (dictionary *bdef-dictionary*))
   "Free a buffer from the bdef dictionary, removing all keys that point to it."

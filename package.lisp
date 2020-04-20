@@ -16,7 +16,7 @@
    #:bdef-free
 
    #:bdef-elt
-   #:bdef-range
+   #:bdef-subseq
 
    #:define-bdef-auto-metadata
    #:set-bdef-auto-metadata
