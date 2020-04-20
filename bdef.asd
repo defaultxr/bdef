@@ -12,7 +12,9 @@
                #:eager-future2)
   :components ((:file "package")
                (:file "bdef")
-               (:file "splits"))
+               (:file "splits")
+               #+#.(cl:if (cl:find-package "SEQUENCE") '(:and) '(:or))
+               (:file "sequence-extensions"))
   :in-order-to ((test-op (test-op "bdef/tests"))))
 
 (asdf:defsystem #:bdef/cl-patterns
