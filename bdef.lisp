@@ -196,21 +196,23 @@ Note that this doesn't include aliases (i.e. bdef keys that point to another key
         (bdef-get result dictionary)
         result)))
 
-(defun bdef-metadata (bdef key)
+(defun bdef-metadata (bdef &optional key)
   "Get the value of BDEF's metadata for KEY. Returns true as a second value if the metadata had an entry for KEY, or false if it did not.
 
 Note that this function will block if the specified metadata is one of the `*bdef-auto-metadata*' that hasn't finished being generated yet."
   (let ((bdef (ensure-bdef bdef)))
-    (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
-      (funcall (cadr dyn-meta) bdef)
-      (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
-        (values
-         (if val
-             (if (typep val 'eager-future2:future)
-                 (setf (bdef-metadata bdef key) (eager-future2:yield val))
+    (if key
+        (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
+          (funcall (cadr dyn-meta) bdef)
+          (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
+            (values
+             (if val
+                 (if (typep val 'eager-future2:future)
+                     (setf (bdef-metadata bdef key) (eager-future2:yield val))
+                     val)
                  val)
-             val)
-         present-p)))))
+             present-p)))
+        (slot-value bdef 'metadata))))
 
 (defun (setf bdef-metadata) (value bdef key)
   ;; if VALUE is a splits object and its `splits-bdef' is nil, set it to point to this bdef.
