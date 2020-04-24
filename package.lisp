@@ -4,19 +4,36 @@
   (:use #:cl
         #:alexandria)
   (:export
+
+   ;;; bdef.lisp
+   
    #:*bdef-temporary-directory*
    #:*bdef-backends*
    #:*bdef-dictionary*
-   #:all-bdefs
+
    #:bdef
+   #:bdef-key
    #:bdef-buffer
-   #:bdef-metadata
-   #:bdef-metadata-keys
-   #:bdef-splits
+   #:all-bdefs
+
    #:bdef-free
+
+   #:bdef-id
    #:bdef-length
+   #:bdef-sample-rate
+   #:bdef-channels
+   #:bdef-file
+
+   #:bdef-duration
+   #:bdef-tempo
+   #:bdef-dur
+   #:bdef-splits
+
    #:bdef-elt
    #:bdef-subseq
+
+   #:bdef-metadata
+   #:bdef-metadata-keys
 
    #:define-bdef-auto-metadata
    #:set-bdef-auto-metadata
@@ -24,6 +41,8 @@
 
    #:define-bdef-dynamic-metadata
    #:remove-bdef-dynamic-metadata
+
+   ;;; splits.lisp
 
    #:splits
    #:make-splits
@@ -33,4 +52,5 @@
 
    #:splits-from-aubio-onsets
    #:splits-from-audacity-labels
-   #:audacity-labels-from-splits))
+   #:audacity-labels-from-splits
+   #:splits-from-op-1-drumset))

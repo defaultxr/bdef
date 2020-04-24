@@ -4,7 +4,7 @@
   :description "Buffer definition; audio buffer abstraction for sound synthesis systems"
   :author "modula t. <defaultxr at gmail dot com>"
   :license "MIT"
-  :version "0.6"
+  :version "0.8"
   :serial t
   :depends-on (#:alexandria
                #:parse-float
@@ -21,7 +21,7 @@
   :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with cl-patterns functionality)."
   :author "modula t. <defaultxr at gmail dot com>"
   :license "MIT"
-  :version "0.6"
+  :version "0.8"
   :serial t
   :depends-on (#:bdef
                #:cl-patterns)
@@ -31,7 +31,7 @@
   :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with cl-collider functionality)."
   :author "modula t. <defaultxr at gmail dot com>"
   :license "MIT"
-  :version "0.6"
+  :version "0.8"
   :serial t
   :depends-on (#:bdef
                #:cl-collider)
@@ -41,7 +41,7 @@
   :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with Incudine functionality)."
   :author "modula t. <defaultxr at gmail dot com>"
   :license "MIT"
-  :version "0.6"
+  :version "0.8"
   :serial t
   :depends-on (#:bdef
                #:incudine)

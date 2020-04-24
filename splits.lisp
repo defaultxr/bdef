@@ -21,7 +21,6 @@
   (/ samples sample-rate))
 
 ;;; splits
-;; FIX: add more extensible-sequences methods
 
 (defclass splits (standard-object #+#.(cl:if (cl:find-package "SEQUENCE") '(:and) '(:or)) sequence)
   ((starts :initarg :starts :type (vector number) :documentation "The vector of split start points. If the \"end\" slot is non-nil, each start point will be matched with an end point in the \"end\" slot with the same index.")
@@ -48,19 +47,25 @@ Examples:
 See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loops', `splits-comments'"
   (assert (member unit (list :percents :samples :seconds)) (unit))
   (assert (typep bdef '(or null bdef)))
-  (let* ((list (mapcar #'ensure-list starts))
-         (comments (or comments (mapcar (lambda (item)
-                                          (car (remove-if-not
-                                                (lambda (x) (or (stringp x)
-                                                                (symbolp x)))
-                                                item)))
-                                        list)))
-         (list (remove-if #'stringp list))
-         (ends (or ends (mapcar #'cadr list)))
+  (let* ((listp (listp (elt starts 0)))
+         (comments (or comments (and listp
+                                     (mapcar (lambda (item)
+                                               (car (remove-if-not
+                                                     (lambda (x) (or (stringp x)
+                                                                     (symbolp x)))
+                                                     item)))
+                                             starts))))
+         (list (when listp
+                 (mapcar (lambda (x) (remove-if #'stringp x)) starts)))
+         (ends (or ends (and listp
+                             (mapcar #'cadr list))))
          (ends (if (find-if-not #'null ends) ends nil))
-         (loops (or loops (mapcar #'caddr list)))
+         (loops (or loops (and listp
+                               (mapcar #'caddr list))))
          (loops (if (find-if-not #'null loops) loops nil))
-         (starts (mapcar #'car list)))
+         (starts (if listp
+                     (mapcar #'car list)
+                     starts)))
     (make-instance 'splits
                    :starts (coerce starts 'vector)
                    :ends (when ends (coerce ends 'vector))
@@ -100,9 +105,9 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
   (let* ((bdef (splits-bdef splits)) ;; FIX: handle the case if bdef is NIL.
          (conv-func (%splits-conversion-function-name splits unit))
          (conv-func-total (case conv-func
-                            ((percents-samples samples-percents) (frames bdef))
-                            ((samples-seconds seconds-samples) (sample-rate bdef))
-                            ((percents-seconds seconds-percents) (duration bdef)))))
+                            ((percents-samples samples-percents) (bdef-length bdef))
+                            ((samples-seconds seconds-samples) (bdef-sample-rate bdef))
+                            ((percents-seconds seconds-percents) (bdef-duration bdef)))))
     (if (eql 'identity conv-func)
         'identity
         (lambda (x) (funcall conv-func x conv-func-total)))))
@@ -117,15 +122,23 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
     (bdef
      (splits-length (bdef-splits object)))))
 
-#+#.(cl:if (cl:find-package "SEQUENCE") '(:and) '(:or))
-(defmethod sequence:length ((this splits))
-  (splits-length this))
+(defmethod bdef-length ((this splits))
+  (bdef-length (splits-bdef this)))
 
-(defmethod frames ((this splits))
-  (frames (splits-bdef this)))
+(defmethod bdef-sample-rate ((this splits))
+  (bdef-sample-rate (splits-bdef this)))
 
-(defmethod duration ((this splits))
-  (duration (splits-bdef this)))
+(defmethod bdef-channels ((this splits))
+  (bdef-channels (splits-bdef this)))
+
+(defmethod bdef-id ((this splits))
+  (bdef-id (splits-bdef this)))
+
+(defmethod bdef-file ((this splits))
+  (bdef-file (splits-bdef this)))
+
+(defmethod bdef-subseq ((this splits) start &optional end channel)
+  (bdef-subseq (splits-bdef this) start end channel))
 
 (defun splits-points (splits &optional (point :start) (unit :percent))
   "Get the split points for POINTS (i.e. start, end, loops, comments) from SPLITS converted to UNIT (i.e. percent, samples, seconds)."
@@ -175,8 +188,8 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
     ((or bdef splits)
      (ecase unit
        ((:percent :percents) 1.0)
-       ((:sample :frame :samples :frames) (frames object))
-       ((:second :seconds) (duration object))))))
+       ((:sample :frame :samples :frames) (bdef-length object))
+       ((:second :seconds) (bdef-duration object))))))
 
 ;;; splits / analysis methods
 
@@ -197,24 +210,15 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
                   (or (parse-float:parse-float (elt split bpm-pos) :junk-allowed t)
                       (parse-float:parse-float (elt split (1- bpm-pos)) :junk-allowed t))
                   (loop :for i :in (nreverse split)
-                     :for bpm = (parse-float:parse-float i :junk-allowed t)
-                     :if (and (numberp bpm)
-                              (>= 400 bpm 50))
-                     :return bpm))))))
-
-(defun extract-bpm-from-file-metadata (file) ;; FIX: this should be used on the source too (i.e. mp3 files) in case there is a BPM value in the tags.
-  "Extract the BPM from the metadata embedded in the file using ffmpeg to read it."
-  (when file
-    (when-let ((metadata (ffmpeg-metadata file)))
-      (dolist (tag (list :tbp :tempo :bpm :tbpm))
-        (when-let* ((get (getf metadata tag))
-                    (get (parse-float:parse-float get :junk-allowed t)))
-          (when (plusp get)
-            (return-from extract-bpm-from-file-metadata get)))))))
+                        :for bpm = (parse-float:parse-float i :junk-allowed t)
+                        :if (and (numberp bpm)
+                                 (>= 400 bpm 50))
+                          :return bpm))))))
 
 ;;; aubio
 
-(defparameter *aubio-python-directory* #P"~/misc/aubio/python/demos/")
+(defparameter *aubio-python-directory* #P"~/misc/aubio/python/demos/" ;; FIX: can we do without this?
+              "The path to Aubio's \"demos\" directory.")
 
 ;; FIX: maybe just make a general function for all the aubio commands?
 (defun aubio-onsets-read (file &rest args &key (algorithm :default) (threshold 0.3) (silence -90) &allow-other-keys)
@@ -225,7 +229,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
                (if (or (stringp file)
                        (pathnamep file))
                    file
-                   (path file)))))
+                   (bdef-file file)))))
     (labels ((split (string &optional list)
                (let ((start (position #\newline string)))
                  (if start
@@ -235,13 +239,15 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
               (split (uiop:run-program (list "aubioonset" (namestring (truename file)))
                                        :output '(:string :stripped t)))))))
 
-(defun splits-from-aubio-onsets (file &rest args &key &allow-other-keys) ;; FIX: make sure this works with bdefs
+(defun splits-from-aubio-onsets (file &rest args &key &allow-other-keys)
   "Make a `splits' from onsets data generated by Aubio."
-  (apply 'make-splits
-         (coerce (apply 'aubio-onsets-read file args) 'vector) ;; FIX: just generate as a vector?
-         :unit :seconds
-         (when (typep file 'bdef)
-           (list :bdef file))))
+  (etypecase file
+    (bdef (splits-from-aubio-onsets (bdef-file file)))
+    (string (apply 'make-splits
+                   (coerce (apply 'aubio-onsets-read file args) 'vector) ;; FIX: just generate as a vector?
+                   :unit :seconds
+                   (when (typep file 'bdef)
+                     (list :bdef file))))))
 
 (defun splits-from-aubio-track (file &key (buf-size 512) (hop-size 256) (silence-threshold -90)) ;; FIX: make a more general aubio function for any of its commands?
   (make-splits (mapcar 'parse-float:parse-float
@@ -260,7 +266,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 (defun aubio-demo-bpm (file &key (mode :default))
   "Use aubio's demo_bpm_extract.py to get the bpm of FILE."
   (assert (member mode '(:default :fast :super-fast)) (mode))
-  (let* ((file (ensure-readable-audio-file (path file)))
+  (let* ((file (ensure-readable-audio-file (bdef-file file)))
          (string (uiop:run-program (list "python" (namestring (truename (merge-pathnames *aubio-python-directory* "demo_bpm_extract.py"))) "-m" (string-downcase (string mode)) (namestring (truename file)))
                                    :output '(:string :stripped t))))
     (car (multiple-value-list (read-from-string (subseq string 0 (position #\space string)))))))
@@ -269,7 +275,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
   "Use aubio's demo_tempo.py to get a list of beats in FILE. The returned list gives onsets in seconds from the start of the file."
   (declare (ignore sample-rate)) ;; FIX: actually use the sample-rate key
   ;; FIX: uiop:run-program allows you to read output as a stream. that might be better?
-  (let ((file (ensure-readable-audio-file (path file))))
+  (let ((file (ensure-readable-audio-file (bdef-file file))))
     (labels ((split (string &optional list)
                (let ((start (position #\newline string)))
                  (if start
@@ -406,7 +412,7 @@ See also: `op-1-format-to-frame'"
 "Make a `splits' from an OP-1 format drumset."
 (etypecase drumset
 (bdef
-(let ((splits (splits-from-op-1-drumset (path drumset))))
+(let ((splits (splits-from-op-1-drumset (bdef-file drumset))))
 (setf (splits-bdef splits) drumset)
 splits))
 (string

@@ -148,11 +148,11 @@ Load the ~bdef/cl-collider~ system to enable this.
 
 Load the ~bdef/cl-patterns~ system to enable this.
 
-** Designed to work with multiple backends:
+** Supports multiple sound server backends:
 
-At the moment, [[https://supercollider.github.io/][SuperCollider]]/[[https://github.com/byulparan/cl-collider][cl-collider]] is the main one. Support for [[https://incudine.sourceforge.net/][Incudine]] is planned.
+[[https://supercollider.github.io/][SuperCollider]]/[[https://github.com/byulparan/cl-collider][cl-collider]] is the primary backend tested against, however [[https://incudine.sourceforge.net/][Incudine]] is also supported for most functionality.
 
-Enable the cl-collider backend like so:
+Enable the cl-collider backend, for example, like so:
 
 #+BEGIN_SRC lisp
   (ql:quickload :bdef/cl-collider)
@@ -226,10 +226,29 @@ You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 (bdef-metadata :pee :tempo) ;; ...and it is stored in the bdef's :tempo metadatum! nice!
 #+END_SRC
 
+* Backends
+
+Currently, bdef supports SuperCollider via cl-collider as a backend. There is also basic (likely buggy) Incudine support - this will be improved later.
+
+To write your own backend, you will need to implement the following methods on your backend's buffer class:
+
+- ~bdef-backend-supported-file-types~
+- ~bdef-backend-load~
+- ~bdef-backend-free~
+- ~bdef-length~
+- ~bdef-sample-rate~
+- ~bdef-channels~
+- ~bdef-id~ (optional if your backend doesn't use buffer IDs)
+- ~bdef-file~ (optional if your backend doesn't keep track of what file a buffer was loaded from)
+- ~bdef-subseq~
+
+All other functionality is derived from those functions.
+
+For the user's convenience, you might also want to define methods on the ~bdef~ class for the backend's relevant functions; see the bottom of [[file:cl-collider.lisp][cl-collider.lisp]] for an example.
+
 * Future
 
-- Right now, ~cl-collider~ is the only supported backend. In the future, [[http://incudine.sourceforge.net/][Incudine]] should work as well.
+- Fix the various minor/not-so-minor issues marked with "FIX" in the code.
+- We have ~bdef-subseq~ to get buffer data; we should have support for setting buffer data as well.
 - Support for configurable pathname shortcuts. (i.e. set ~foo~ as a shortcut to ~/a/long/path/name/~, then provide ~"foo/bar.wav"~ instead of ~"/a/long/path/name/bar.wav"~.)
-- Loading with ~num-channels~ set to 1 loads only the first channel. Might make more sense to mix all channels down to mono, perhaps as an option.
-- Auto-generate splits by dividing a file into N parts, or divide every N seconds/frames/etc. Also make it possible to apply this only to a specific section of the file (i.e. if a track has multiple tempos).
-- "Dynamic" splits; i.e. defing a set of splits as "this region in four equal-length pieces" rather than immediately "baking" generated splits as a list of specific points.
+- "Dynamic" splits; i.e. define a set of splits as "this region in four equal-length pieces" rather than all splits being immediately "baked" as specific points.

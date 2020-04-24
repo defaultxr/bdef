@@ -6,7 +6,7 @@
 
 (defmethod backend-convert-object ((bdef bdef:bdef) key (backend (eql :supercollider)))
   (declare (ignore key))
-  (bdef::id (bdef:bdef-buffer bdef)))
+  (bdef:bdef-id (bdef:bdef-buffer bdef)))
 
 (defmethod backend-convert-object ((bdef bdef:bdef) key (backend (eql :incudine)))
   (declare (ignore key))
@@ -16,7 +16,7 @@
   (declare (ignore key))
   (let ((bdef (bdef::bdef-get object)))
     (if bdef
-        (bdef::id (bdef:bdef-buffer bdef))
+        (bdef:bdef-id (bdef:bdef-buffer bdef))
         object)))
 
 (defmethod backend-convert-object ((object symbol) key (backend (eql :incudine)))
@@ -30,10 +30,10 @@
   (play (bdef:bdef-buffer bdef)))
 
 (defmethod tempo ((bdef bdef:bdef))
-  (bdef:bdef-metadata bdef :tempo))
+  (bdef:bdef-tempo bdef))
 
 (defmethod dur ((bdef bdef:bdef))
-  (* (bdef::duration bdef) (tempo bdef)))
+  (bdef:bdef-dur bdef))
 
 ;;; splits
 
