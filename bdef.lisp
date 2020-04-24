@@ -29,7 +29,7 @@ Note that backends are made available by loading the relevant bdef subsystem wit
          (ext-pos (position #\. path :from-end t))
          (ffmpeg-metadata (ffmpeg-metadata (ffmpeg-data path))))
     (if (and (position (string-downcase (subseq path (1+ ext-pos))) extensions :test #'string-equal)
-             (= num-channels (getf ffmpeg-metadata :channels)))
+             (eql num-channels (getf ffmpeg-metadata :channels)))
         (values path ffmpeg-metadata)
         (let ((output-filename (concatenate 'string *bdef-temporary-directory* (file-namestring (subseq path 0 ext-pos)) "." (string-downcase (symbol-name (car extensions))))))
           (if (probe-file output-filename)
