@@ -159,7 +159,7 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
 
 (defmethod describe-object ((bdef bdef) stream)
   (with-slots (key buffer metadata) bdef
-    (format stream "~s is a ~s.~%  It is ~s seconds long (~s frames), with ~s channels.~%" bdef 'bdef (duration bdef) (frames bdef) (num-channels bdef))
+    (format stream "~s is a ~s.~%  It is ~s seconds long (~s frames), with ~s channels.~%" bdef 'bdef (bdef-duration bdef) (bdef-length bdef) (bdef-channels bdef))
     (format stream "~@[  It contains the audio from the file ~s.~%~]" (bdef-file bdef))
     (format stream "  Keys that point to this buffer are: ~s~%" (bdef-keys-pointing-to bdef))
     (when-let ((meta-keys (bdef-metadata-keys bdef)))
