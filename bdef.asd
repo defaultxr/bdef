@@ -7,8 +7,8 @@
   :version "0.8"
   :serial t
   :depends-on (#:alexandria
+               #:mutility
                #:parse-float
-               #:split-sequence
                #:eager-future2)
   :components ((:file "package")
                (:file "bdef")

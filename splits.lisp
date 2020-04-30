@@ -98,7 +98,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
         (unit-slot (slot-value splits 'unit)))
     (if (string= (symbol-name unit) (symbol-name unit-slot))
         'identity
-        (intern (concatenate 'string (symbol-name unit-slot) "-" (symbol-name unit)) 'bdef))))
+        (intern (concat (symbol-name unit-slot) "-" (symbol-name unit)) 'bdef))))
 
 (defun %splits-conversion-function (splits unit)
   "Get a function that can be used to convert SPLITS' unit into the unit type specified."
@@ -201,7 +201,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 NOTE: If \"bpm\" is not in the string, then this function will look for a number in the range 50-400, starting from the end of the string."
   (when string
     ;; (warn "extract-bpm-from-string is not done yet!")
-    (let* ((split (split-sequence:split-sequence-if (lambda (c) (member c (list #\space #\_ #\-) :test 'char=)) string :remove-empty-subseqs t))
+    (let* ((split (split-string string :char-bag (list #\space #\_ #\-)))
            (bpm-pos (position-if (lambda (s)
                                    (search "bpm" (string-downcase s)))
                                  split
@@ -251,8 +251,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 (defun splits-from-aubio-track (file &key (buf-size 512) (hop-size 256) (silence-threshold -90)) ;; FIX: make a more general aubio function for any of its commands?
   (make-splits (mapcar 'parse-float:parse-float
-                       (split-sequence:split-sequence
-                        #\newline
+                       (split-string
                         (uiop:run-program (list "aubiotrack"
                                                 "-i" (namestring (truename file))
                                                 "-B" (write-to-string buf-size)
@@ -260,7 +259,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
                                                 "-s" (write-to-string silence-threshold)
                                                 "-T" "samples")
                                           :output '(:string :stripped t))
-                        :remove-empty-subseqs t))
+                        :char-bag (list #\newline)))
                :unit :samples))
 
 (defun aubio-demo-bpm (file &key (mode :default))
@@ -310,22 +309,20 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 (defun aubio-track-to-audacity-labels (file) ;; FIX: remove this and just make a function to generate a `splits' from aubiotrack, since `audacity-labels-from-splits' already exists.
   "Generate an Audacity labels file from the output of aubio's aubiotrack on FILE."
   (let ((beats-times (mapcar 'parse-float:parse-float
-                             (split-sequence:split-sequence
-                              #\newline
-                              (uiop:run-program (list "aubiotrack"
-                                                      "-B" "4096"
-                                                      "-H" "128"
-                                                      "-s" "-20"
-                                                      (namestring (truename file)))
-                                                :output '(:string :stripped t))
-                              :remove-empty-subseqs t))))
+                             (split-string (uiop:run-program (list "aubiotrack"
+                                                                   "-B" "4096"
+                                                                   "-H" "128"
+                                                                   "-s" "-20"
+                                                                   (namestring (truename file)))
+                                                             :output '(:string :stripped t))
+                                           :char-bag (list #\newline)))))
     (with-open-file (s #P"~/label.txt" :direction :output :if-exists :supersede)
       (let ((last 0.0))
         (loop :for time :in beats-times
-           :for i :from 0 :below (length beats-times)
-           :do (progn
-                 (format s "~s~c~s~c~s~%" last #\tab time #\tab i)
-                 (setf last time)))))))
+              :for i :from 0 :below (length beats-times)
+              :do (progn
+                    (format s "~s~c~s~c~s~%" last #\tab time #\tab i)
+                    (setf last time)))))))
 
 ;;; bpm-tools
 
@@ -340,12 +337,12 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
   "Make a `splits' from an Audacity labels file."
   (with-open-file (stream labels :direction :input :if-does-not-exist :error)
     (loop :for line = (read-line stream nil)
-       :while line
-       :for parsed = (split-sequence:split-sequence #\tab line :remove-empty-subseqs t)
-       :collect (parse-float:parse-float (car parsed)) :into starts
-       :collect (parse-float:parse-float (cadr parsed)) :into ends
-       :collect (caddr parsed) :into comments
-       :finally (return (make-splits starts :ends ends :comments comments :unit :seconds)))))
+          :while line
+          :for parsed = (split-string line :char-bag (list #\tab))
+          :collect (parse-float:parse-float (car parsed)) :into starts
+          :collect (parse-float:parse-float (cadr parsed)) :into ends
+          :collect (caddr parsed) :into comments
+          :finally (return (make-splits starts :ends ends :comments comments :unit :seconds)))))
 
 (defun audacity-labels-from-splits (splits &optional (file #P"~/label.txt"))
   "Export a `splits' object as an Audacity labels file."

@@ -2,7 +2,8 @@
 
 (defpackage #:bdef
   (:use #:cl
-        #:alexandria)
+        #:alexandria
+        #:mutility)
   (:export
 
    ;;; bdef.lisp

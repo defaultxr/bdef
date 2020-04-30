@@ -8,12 +8,12 @@
 
 (defparameter *bdef-temporary-directory*
   #+(or linux darwin) "/tmp/bdef/"
-  #+windows (concatenate 'string (uiop:getenv-pathname "TEMP") "/bdef/")
+  #+windows (concat (uiop:getenv-pathname "TEMP") "/bdef/")
   "The directory bdef should store its temporary files in (i.e. the .wav files generated from format auto-conversion).")
 
 (defparameter *ffmpeg-path*
   #+(or linux darwin) (ignore-errors (uiop:run-program "which ffmpeg" :output (list :string :stripped t)))
-  #+windows (concatenate 'string (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/") ;; FIX; this is almost certainly wrong
+  #+windows (concat (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/") ;; FIX; this is almost certainly wrong
   "The path to ffmpeg, or nil if ffmpeg could not be found.")
 
 (defparameter *bdef-backends* (list)
@@ -24,48 +24,53 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 ;;; file handling
 
 (defun ensure-readable-audio-file (path &key (num-channels 2) (extensions (list :wav :aif :aiff)))
-  "If PATH ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored in `*bdef-temporary-directory*'. Returns ffmpeg's parsed output as a second value."
+  "If PATH ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored in `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
+
+See also: `file-metadata', `*ffmpeg-path*'"
   (let* ((path (namestring (truename path)))
          (ext-pos (position #\. path :from-end t))
-         (ffmpeg-metadata (ffmpeg-metadata (ffmpeg-data path))))
-    (if (and (position (string-downcase (subseq path (1+ ext-pos))) extensions :test #'string-equal)
-             (eql num-channels (getf ffmpeg-metadata :channels)))
-        (values path ffmpeg-metadata)
-        (let ((output-filename (concatenate 'string *bdef-temporary-directory* (file-namestring (subseq path 0 ext-pos)) "." (string-downcase (symbol-name (car extensions))))))
-          (if (probe-file output-filename)
-              (values output-filename ffmpeg-metadata)
-              (progn
-                (ensure-directories-exist *bdef-temporary-directory*)
-                (let ((ffmpeg-output (uiop:run-program (list *ffmpeg-path* "-i" path "-ac" (write-to-string num-channels) output-filename)
-                                                       :output '(:string :stripped t))))
-                  (values output-filename (ffmpeg-metadata ffmpeg-output)))))))))
+         (file-metadata (file-metadata path)))
+    (values
+     (if (and (position (string-downcase (subseq path (1+ ext-pos))) extensions :test #'string-equal)
+              (eql num-channels (getf file-metadata :channels)))
+         path
+         (let* ((channels-string (write-to-string num-channels))
+                (output-directory (concat *bdef-temporary-directory* channels-string "-channels/"))
+                (output-filename (concat output-directory (file-namestring (subseq path 0 ext-pos)) "." (string-downcase (symbol-name (car extensions))))))
+           (if (probe-file output-filename)
+               output-filename
+               (progn
+                 (ensure-directories-exist output-directory)
+                 (uiop:run-program (list *ffmpeg-path*
+                                         "-i" path
+                                         "-ac" channels-string
+                                         output-filename))
+                 output-filename))))
+     file-metadata)))
 
-;; FIX: consider using easy-audio to get audio file metadata instead?
-(defun ffmpeg-data (file)
-  "Get the standard error output of running ffmpeg on FILE."
-  (nth-value 1 (uiop:run-program (list *ffmpeg-path* "-i" (namestring (truename file))) :error-output '(:string :stripped t) :ignore-error-status t)))
-
-(defun ffmpeg-metadata (ffmpeg-output)
-  "Get the metadata for a file from ffmpeg's output."
-  (when-let* ((split (split-sequence:split-sequence #\newline ffmpeg-output))
-              (metadata-pos (position "  Metadata:" split :test 'string=))
-              (metadata-end (position-if (lambda (s) (eq 0 (search "  Duration: " s))) split))
-              (metadata (subseq split (1+ metadata-pos) metadata-end)))
-    (let* ((stream-line-pos (search "Stream #0:0: Audio: " ffmpeg-output))
-           (newline (position #\newline ffmpeg-output :start stream-line-pos)))
-      (append
-       (list :channels
-             (block channels ;; FIX: we don't detect if there are more than two or less than one (??) channels
-               (dotimes (n 2)
-                 (when (search (nth n (list "mono," "stereo,")) (subseq ffmpeg-output stream-line-pos newline))
-                   (return-from channels n)))
-               0))
-       (loop :for i :in metadata
-             :for pos = (position #\: i)
-             :for key = (subseq i 0 pos)
-             :for value = (subseq i (1+ pos))
-             :append (list (intern (string-upcase (string-trim (list #\space) key)) :keyword)
-                           (string-trim (list #\space) value)))))))
+(defun file-metadata (file)
+  "Get the metadata of FILE as a plist."
+  (multiple-value-bind (stdout stderr)
+      (uiop:run-program (list *ffmpeg-path* "-i" (namestring (truename file)) "-f" "ffmetadata" "-")
+                        :output '(:string :stripped t)
+                        :error-output '(:string :stripped t)
+                        :ignore-error-status t)
+    (let* ((split (cdr (split-string stdout :char-bag (list #\newline))))
+           (kv (flatten (mapcar (lambda (line)
+                                  (split-string line :char-bag #\= :max-num 2))
+                                split)))
+           (plist (loop :for (key value) :on kv :by #'cddr
+                        :append (list (make-keyword (string-upcase key))
+                                      value)))
+           (channels (block channels ;; FIX: we don't detect if there are more than two or less than one (??) channels
+                       (dotimes (n 2)
+                         (when (search (nth n (list "mono," "stereo,")) stderr)
+                           (return-from channels n)))
+                       nil)))
+      (append (when channels
+                (list :channels
+                      channels))
+              plist))))
 
 ;;; backend generics
 
@@ -330,30 +335,30 @@ Note that this function will block if the specified metadata is one of the `*bde
         (backend (or backend
                      (car *bdef-backends*)
                      (error "No bdef backends are currently enabled. Enable one by loading its subsystem."))))
-    (multiple-value-bind (file ffmpeg-metadata)
+    (multiple-value-bind (file file-metadata)
         (ensure-readable-audio-file file :num-channels num-channels :extensions (bdef-backend-supported-file-types backend))
       (let* ((buffer (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (remove-from-plist args :backend :num-channels)))
              (bdef (make-instance 'bdef
                                   :key object
                                   :buffer buffer)))
-        (doplist (key value ffmpeg-metadata)
-            (unless (eql key :channels) ;; the channels key is inserted by the ffmpeg-metadata function for the number of channels the source (pre-conversion) has
-              (if (member key (list :bpm :tbpm))
-                  (setf (bdef-metadata bdef :bpm) (parse-float:parse-float value))
-                  (setf (bdef-metadata bdef key) value))))
+        (doplist (key value file-metadata)
+          (unless (eql key :channels) ;; the channels key is inserted by the `file-metadata' function for the number of channels the source (pre-conversion) has
+            (if (member key (list :bpm :tbpm))
+                (setf (bdef-metadata bdef :bpm) (parse-float:parse-float value))
+                (setf (bdef-metadata bdef key) value))))
         (doplist (key function *bdef-auto-metadata*)
-            (unless (or (bdef-metadata bdef key) ;; we trust the file's tags; no need to detect the bpm if we already know it
-                        (getf metadata key))
-              (let ((k key)
-                    (f function))
-                (setf (bdef-metadata bdef key)
-                      (eager-future2:pcall
-                       (lambda ()
-                         (let ((value (funcall f bdef)))
-                           (setf (bdef-metadata bdef k) value)
-                           value)))))))
+          (unless (or (bdef-metadata bdef key) ;; we trust the file's tags; no need to detect the bpm if we already know it
+                      (getf metadata key))
+            (let ((k key)
+                  (f function))
+              (setf (bdef-metadata bdef key)
+                    (eager-future2:pcall
+                     (lambda ()
+                       (let ((value (funcall f bdef)))
+                         (setf (bdef-metadata bdef k) value)
+                         value)))))))
         (doplist (key value metadata)
-            (setf (bdef-metadata bdef key) value))
+          (setf (bdef-metadata bdef key) value))
         bdef))))
 
 (defmethod no-applicable-method ((method (eql #'bdef-load)) &rest args)
