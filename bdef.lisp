@@ -197,7 +197,7 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
                                      value
                                      (bdef-load value :num-channels num-channels :wavetable wavetable)))))
           (doplist (key value metadata)
-              (setf (bdef-metadata res key) value))
+            (setf (bdef-metadata res key) value))
           res)
         (or (bdef-get key)
             (if (symbolp key)
@@ -362,7 +362,7 @@ Note that this function will block if the specified metadata is one of the `*bde
         bdef))))
 
 (defmethod no-applicable-method ((method (eql #'bdef-load)) &rest args)
-  (error "None of the enabled bdef backends support loading ~s." (cadr args)))
+  (error "None of the enabled bdef backends support loading ~s." (car args)))
 
 ;;; bdef methods:
 ;; (these should be implemented for each bdef backend)
