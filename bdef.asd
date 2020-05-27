@@ -1,10 +1,15 @@
 ;;;; bdef.asd
 
 (asdf:defsystem #:bdef
+  :name "bdef"
   :description "Buffer definition; audio buffer abstraction for sound synthesis systems"
-  :author "modula t. <defaultxr at gmail dot com>"
+  :author "modula t."
   :license "MIT"
   :version "0.8"
+  :homepage "https://github.com/defaultxr/bdef"
+  :bug-tracker "https://github.com/defaultxr/bdef/issues"
+  :mailto "defaultxr at gmail dot com"
+  :source-control (:git "git@github.com:defaultxr/bdef.git")
   :serial t
   :depends-on (#:alexandria
                #:mutility
@@ -18,8 +23,8 @@
   :in-order-to ((test-op (test-op "bdef/tests"))))
 
 (asdf:defsystem #:bdef/cl-patterns
-  :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with cl-patterns functionality)."
-  :author "modula t. <defaultxr at gmail dot com>"
+  :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with cl-patterns functionality)"
+  :author "modula t."
   :license "MIT"
   :version "0.8"
   :serial t
@@ -28,8 +33,8 @@
   :components ((:file "cl-patterns")))
 
 (asdf:defsystem #:bdef/cl-collider
-  :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with cl-collider functionality)."
-  :author "modula t. <defaultxr at gmail dot com>"
+  :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with cl-collider functionality)"
+  :author "modula t."
   :license "MIT"
   :version "0.8"
   :serial t
@@ -38,8 +43,8 @@
   :components ((:file "cl-collider")))
 
 (asdf:defsystem #:bdef/incudine
-  :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with Incudine functionality)."
-  :author "modula t. <defaultxr at gmail dot com>"
+  :description "Buffer definition; audio buffer abstraction for sound synthesis systems (with Incudine functionality)"
+  :author "modula t."
   :license "MIT"
   :version "0.8"
   :serial t
@@ -49,8 +54,8 @@
 
 (asdf:defsystem #:bdef/tests
   :name "bdef/tests"
-  :author "modula t. <defaultxr@gmail.com>"
-  :description "FiveAM-based tests suite for bdef."
+  :author "modula t."
+  :description "FiveAM-based tests suite for bdef"
   :license "MIT"
   :depends-on (#:bdef
                #:mutility
