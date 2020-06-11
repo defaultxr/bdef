@@ -65,7 +65,7 @@ See also: `file-metadata', `*ffmpeg-path*'"
            (channels (block channels ;; FIX: we don't detect if there are more than two or less than one (??) channels
                        (dotimes (n 2)
                          (when (search (nth n (list "mono," "stereo,")) stderr)
-                           (return-from channels n)))
+                           (return-from channels (1+ n))))
                        nil)))
       (append (when channels
                 (list :channels
