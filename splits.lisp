@@ -122,6 +122,9 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
     (bdef
      (splits-length (bdef-splits object)))))
 
+(defmethod bdef-buffer ((this splits))
+  (bdef-buffer (splits-bdef this)))
+
 (defmethod bdef-length ((this splits))
   (bdef-length (splits-bdef this)))
 
