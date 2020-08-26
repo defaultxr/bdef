@@ -173,7 +173,7 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
             :do (format stream "    ~s -> ~s~%" key (bdef-metadata bdef key)))))) ;; FIX: use format's indentation directive?
 
 (defun bdef-key-cleanse (key)
-  "Expands pathnames to their full ones."
+  "Expands file names to their full unabbreviated forms as strings. Other values are simply returned as-is."
   (typecase key
     (pathname (namestring (truename key)))
     (string (bdef-key-cleanse (pathname key)))
@@ -339,8 +339,9 @@ Note that this function will block if the specified metadata is one of the `*bde
         (ensure-readable-audio-file file :num-channels num-channels :extensions (bdef-backend-supported-file-types backend))
       (let* ((buffer (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (remove-from-plist args :backend :num-channels)))
              (bdef (make-instance 'bdef
-                                  :key object
+                                  :key file
                                   :buffer buffer)))
+        (bdef-set file bdef)
         (doplist (key value file-metadata)
           (unless (eql key :channels) ;; the channels key is inserted by the `file-metadata' function for the number of channels the source (pre-conversion) has
             (if (member key (list :bpm :tbpm))
