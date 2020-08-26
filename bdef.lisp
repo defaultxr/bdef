@@ -345,7 +345,9 @@ Note that this function will block if the specified metadata is one of the `*bde
         (doplist (key value file-metadata)
           (unless (eql key :channels) ;; the channels key is inserted by the `file-metadata' function for the number of channels the source (pre-conversion) has
             (if (member key (list :bpm :tbpm))
-                (setf (bdef-metadata bdef :bpm) (parse-float:parse-float value))
+                (let ((parsed (parse-float:parse-float value)))
+                  (unless (= 0 parsed)
+                    (setf (bdef-metadata bdef :bpm) parsed)))
                 (setf (bdef-metadata bdef key) value))))
         (doplist (key function *bdef-auto-metadata*)
           (unless (or (bdef-metadata bdef key) ;; we trust the file's tags; no need to detect the bpm if we already know it
