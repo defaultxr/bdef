@@ -6,17 +6,17 @@
 
 ;;; global variables/configuration
 
-(defparameter *bdef-temporary-directory*
+(defvar *bdef-temporary-directory*
   #+(or linux darwin) "/tmp/bdef/"
   #+windows (concat (uiop:getenv-pathname "TEMP") "/bdef/")
   "The directory bdef should store its temporary files in (i.e. the .wav files generated from format auto-conversion).")
 
-(defparameter *ffmpeg-path*
+(defvar *ffmpeg-path*
   #+(or linux darwin) (ignore-errors (uiop:run-program "which ffmpeg" :output (list :string :stripped t)))
   #+windows (concat (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/") ;; FIX; this is almost certainly wrong
   "The path to ffmpeg, or nil if ffmpeg could not be found.")
 
-(defparameter *bdef-backends* (list)
+(defvar *bdef-backends* (list)
   "The list of enabled backends. When the user attempts to create a bdef, each backend in this list is used to try to create the bdef from the file or object. If a backend returns nil, the next backend in the list will be tried. This is repeated until the first backend successfully returns a bdef object.
 
 Note that backends are made available by loading the relevant bdef subsystem with Quicklisp or ASDF. For example, if you want to use SuperCollider/cl-collider, load `bdef/cl-collider'. Once you've loaded it, you should see that the :cl-collider keyword is in this list.")
