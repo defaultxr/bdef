@@ -407,7 +407,7 @@ See also: `bdef-elt'"))
 (defgeneric bdef-duration (bdef)
   (:documentation "Get the duration of the bdef in seconds."))
 
-(defmethod bdef-duration (bdef)
+(defmethod bdef-duration ((bdef t))
   (let ((buffer (bdef-buffer bdef)))
     (/ (bdef-length buffer) (bdef-sample-rate buffer))))
 
