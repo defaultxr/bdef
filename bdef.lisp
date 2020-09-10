@@ -7,8 +7,7 @@
 ;;; global variables/configuration
 
 (defvar *bdef-temporary-directory*
-  #+(or linux darwin) "/tmp/bdef/"
-  #+windows (concat (uiop:getenv-pathname "TEMP") "/bdef/")
+  (merge-pathnames "bdef/" (uiop:temporary-directory))
   "The directory bdef should store its temporary files in (i.e. the .wav files generated from format auto-conversion).")
 
 (defvar *ffmpeg-path*
