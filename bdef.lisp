@@ -23,28 +23,29 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 ;;; file handling
 
 (defun ensure-readable-audio-file (path &key (num-channels 2) (extensions (list :wav :aif :aiff)))
-  "If PATH ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored in `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
+  "If PATH ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored under `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
 
-See also: `file-metadata', `*ffmpeg-path*'"
-  (let* ((path (namestring (truename path)))
-         (ext-pos (position #\. path :from-end t))
+See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
+  (let* ((path (truename path))
+         (ext (pathname-type path))
          (file-metadata (file-metadata path)))
     (values
-     (if (and (position (string-downcase (subseq path (1+ ext-pos))) extensions :test #'string-equal)
-              (eql num-channels (getf file-metadata :channels)))
-         path
-         (let* ((channels-string (write-to-string num-channels))
-                (output-directory (concat *bdef-temporary-directory* channels-string "-channels/"))
-                (output-filename (concat output-directory (file-namestring (subseq path 0 ext-pos)) "." (string-downcase (symbol-name (car extensions))))))
-           (if (probe-file output-filename)
-               output-filename
-               (progn
-                 (ensure-directories-exist output-directory)
-                 (uiop:run-program (list *ffmpeg-path*
-                                         "-i" path
-                                         "-ac" channels-string
-                                         output-filename))
-                 output-filename))))
+     (namestring
+      (if (and (position ext extensions :test #'string-equal)
+               (eql num-channels (getf file-metadata :channels)))
+          path
+          (let* ((output-directory (merge-pathnames (concat num-channels "-channel/") *bdef-temporary-directory*))
+                 (output-filename (make-pathname
+                                   :directory (pathname-directory output-directory)
+                                   :name (pathname-name path)
+                                   :type (string-downcase (symbol-name (car extensions))))))
+            (unless (probe-file output-filename)
+              (ensure-directories-exist output-directory)
+              (uiop:run-program (list *ffmpeg-path*
+                                      "-i" (namestring path)
+                                      "-ac" (write-to-string num-channels)
+                                      (namestring output-filename))))
+            output-filename)))
      file-metadata)))
 
 (defun file-metadata (file)
