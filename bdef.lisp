@@ -83,6 +83,9 @@ See also: `bdef-backend-load'"))
 
 See also: `bdef-backend-free', `bdef-backend-supported-file-types'"))
 
+(defmethod bdef-backend-load (backend (object pathname) &rest args &key &allow-other-keys)
+  (apply #'bdef-backend-load backend (namestring object) args))
+
 (defgeneric bdef-backend-free (buffer)
   (:documentation "Free a buffer via its backend.
 
