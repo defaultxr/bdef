@@ -33,6 +33,9 @@
           (bdef-metadata bdef :wavetable) (and wavetable t))
     bdef))
 
+(defmethod bdef-buffer ((buffer cl-collider::buffer))
+  buffer)
+
 (defmethod bdef-backend-free ((buffer cl-collider::buffer))
   (cl-collider:buffer-free buffer))
 
