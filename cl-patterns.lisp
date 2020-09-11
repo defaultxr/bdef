@@ -1,6 +1,6 @@
 (in-package #:cl-patterns)
 
-(endpushnew *dictionary-lookup-functions* 'bdef:bdef)
+(affixnew *dictionary-lookup-functions* 'bdef:bdef)
 
 ;;; generics
 
