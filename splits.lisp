@@ -377,35 +377,17 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
   "Convert a frame number to the OP-1 split point format.
 
 See also: `op-1-format-to-frame'"
-  (round
-   (/ +op-1-drumkit-end+
-      (* +op-1-bytes-in-12-sec+ frame +size-of-uint16-t+))))
+  (* (floor +op-1-drumkit-end+ +op-1-bytes-in-12-sec+)
+     frame +size-of-uint16-t+))
 
-(defun op-1-format-to-frame (op-1-split)
-  "Convert a number in OP-1 split point format to a frame number.
-
-See also: `frame-to-op-1-format'."
-  (round (/ (* (/ op-1-split +op-1-drumkit-end+)
-               +size-of-uint16-t+ +op-1-bytes-in-12-sec+)
-            4)))
-
-(defun frame-to-op-1-format.new (frame)
+(defun op-1-format-to-frame (op-1)
   "Convert a frame number to the OP-1 split point format.
 
 See also: `op-1-format-to-frame'"
   (round
-   (* (/ +op-1-drumkit-end+
-         +op-1-bytes-in-12-sec+)
-      frame +size-of-uint16-t+)))
-
-(defun op-1-format-to-frame.new (op-1)
-  "Convert a frame number to the OP-1 split point format.
-
-See also: `op-1-format-to-frame'"
-  (round
-   (* (/ +op-1-bytes-in-12-sec+
-         +op-1-drumkit-end+)
-      op-1 +size-of-uint16-t+)))
+   (/  op-1
+       (* (floor +op-1-drumkit-end+ +op-1-bytes-in-12-sec+)
+          +size-of-uint16-t+))))
 
 #|
 (defun splits-from-op-1-drumset (drumset)
