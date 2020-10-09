@@ -59,6 +59,7 @@
   :license "MIT"
   :depends-on (#:bdef
                #:mutility
+               #:mutility/test-helpers
                #:fiveam)
   :components ((:file "tests"))
   :perform (test-op (op c)
