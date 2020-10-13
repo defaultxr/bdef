@@ -54,8 +54,8 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
   "Get the metadata of FILE as a plist."
   (multiple-value-bind (stdout stderr)
       (uiop:run-program (list *ffmpeg-path* "-i" (namestring (truename file)) "-f" "ffmetadata" "-")
-                        :output '(:string :stripped t)
-                        :error-output '(:string :stripped t)
+                        :output (list :string :stripped t)
+                        :error-output (list :string :stripped t)
                         :ignore-error-status t)
     (let* ((split (cdr (split-string stdout :char-bag (list #\newline))))
            (kv (flatten (mapcar (lambda (line)
@@ -181,6 +181,12 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
       (format stream "  It has the following metadata:~%")
       (loop :for key :in meta-keys
             :do (format stream "    ~s -> ~s~%" key (bdef-metadata bdef key)))))) ;; FIX: use format's indentation directive?
+
+(defgeneric bdef-key (bdef)
+  (:documentation "The \"key\" (name) of this bdef."))
+
+(defgeneric bdef-id (bdef)
+  (:documentation "The ID number of this bdef, or nil if the bdef's backend does not support IDs."))
 
 (defun bdef-key-cleanse (key)
   "Expands file names to their full unabbreviated forms as strings. Other values are simply returned as-is."

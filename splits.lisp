@@ -336,12 +336,12 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 ;;; audacity labels
 
-(defun splits-from-audacity-labels (labels)
+(defun splits-from-audacity-labels (file)
   "Make a `splits' from an Audacity labels file."
-  (with-open-file (stream labels :direction :input :if-does-not-exist :error)
-    (loop :for line = (read-line stream nil)
+  (with-open-file (stream file :direction :input :if-does-not-exist :error)
+    (loop :for line := (read-line stream nil)
           :while line
-          :for parsed = (split-string line :char-bag (list #\tab))
+          :for parsed := (split-string line :char-bag (list #\tab))
           :collect (parse-float:parse-float (car parsed)) :into starts
           :collect (parse-float:parse-float (cadr parsed)) :into ends
           :collect (caddr parsed) :into comments
