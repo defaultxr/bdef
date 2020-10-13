@@ -14,6 +14,7 @@
   :depends-on (#:alexandria
                #:mutility
                #:parse-float
+               #:jsown
                #:eager-future2)
   :components ((:file "package")
                (:file "bdef")

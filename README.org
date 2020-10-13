@@ -64,7 +64,10 @@ bdef includes functionality for defining buffer regions called ~splits~. This is
 
 [[https://aubio.org][Aubio]] is an external library of audio analysis functions. If installed, splits can be automatically generated from its analyses.
 
-Functionality for importing/exporting audio splits/regions to other programs are in the works as well: OP-1 drumsets, Audacity labels, Renoise regions, etc.
+bdef can also generate splits from other formats as well:
+- OP-1 drumsets (~splits-from-op-1-drumset~, but automatically parsed from any valid ~aif~ or ~aiff~ file)
+- Audacity labels (~splits-from-audacity-labels~)
+- Renoise regions (planned for future implementation)
 
 See the following section for detail on more features of the bdef library.
 
@@ -225,6 +228,14 @@ You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 
 (bdef-metadata :pee :tempo) ;; ...and it is stored in the bdef's :tempo metadatum! nice!
 #+END_SRC
+
+** Ability to import splits from OP-1 drumset file metadata:
+
+#+begin_src lisp
+(bdef::splits-from-op-1-drumset "/path/to/op-1-drumset.aif") ;; generates a splits by parsing the metadata in the file.
+#+end_src
+
+Note that any ~aif~ or ~aiff~ file will automatically be checked for OP-1 metadata, which will be parsed and stored in the ~splits~ bdef metadata key if it is found.
 
 * Backends
 

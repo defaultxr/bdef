@@ -48,6 +48,8 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
             output-filename)))
      file-metadata)))
 
+;; FIX: just parse the json from the following command instead:
+;; ffprobe -v quiet -print_format json -show_format -show_streams FILE
 (defun file-metadata (file)
   "Get the metadata of FILE as a plist."
   (multiple-value-bind (stdout stderr)
@@ -123,6 +125,11 @@ See also: `bdef-backend-load'"))
 (define-bdef-auto-metadata :dur
   (when-let ((tempo (bdef-metadata bdef :tempo)))
     (round (* tempo (bdef-duration bdef)))))
+
+(define-bdef-auto-metadata :splits
+  (when-let ((original-file (bdef-metadata bdef :original-file)))
+    (when (member (pathname-type (pathname original-file)) (list "aif" "aiff") :test #'string-equal)
+      (splits-from-op-1-drumset original-file :if-invalid nil))))
 
 ;;; dynamic metadata
 
@@ -334,16 +341,17 @@ Note that this function will block if the specified metadata is one of the `*bde
 
 (defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) id metadata)
   (declare (ignorable id wavetable))
-  (let ((file (bdef-key-cleanse object))
+  (let ((original-file (bdef-key-cleanse object))
         (backend (or backend
                      (car *bdef-backends*)
                      (error "No bdef backends are currently enabled. Enable one by loading its subsystem."))))
     (multiple-value-bind (file file-metadata)
-        (ensure-readable-audio-file file :num-channels num-channels :extensions (bdef-backend-supported-file-types backend))
+        (ensure-readable-audio-file original-file :num-channels num-channels :extensions (bdef-backend-supported-file-types backend))
       (let* ((buffer (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (remove-from-plist args :backend :num-channels)))
              (bdef (make-instance 'bdef
                                   :key file
                                   :buffer buffer)))
+        (setf (bdef-metadata bdef :original-file) original-file)
         (bdef-set file bdef)
         (doplist (key value file-metadata)
           (unless (eql key :channels) ;; the channels key is inserted by the `file-metadata' function for the number of channels the source (pre-conversion) has

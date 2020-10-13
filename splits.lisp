@@ -389,31 +389,39 @@ See also: `op-1-format-to-frame'"
        (* (floor +op-1-drumkit-end+ +op-1-bytes-in-12-sec+)
           +size-of-uint16-t+))))
 
-#|
-(defun splits-from-op-1-drumset (drumset)
-"Make a `splits' from an OP-1 format drumset."
-(etypecase drumset
-(bdef
-(let ((splits (splits-from-op-1-drumset (bdef-file drumset))))
-(setf (splits-bdef splits) drumset)
-splits))
-(string
-(with-open-file (stream drumset :direction :input)
-(let ((array (make-array 4 :initial-element nil)))
-(loop :for peek = (peek-char stream nil nil)
-:if (null peek)
-:do (progn
-(print 'couldnt-find-it)
-(loop-finish))
-:if (char= #\o peek)
-:do (progn
-(read-sequence array stream)
-(when (equalp #(#\o #\p #\- #\1) array)
-(print 'found-it)))
-:do (read-char stream nil nil)))
-;; (make-splits starts :ends ends :unit :frames)
-))))
-|#
+(defun splits-from-op-1-drumset (drumset &key (if-invalid :error))
+  "Make a `splits' object by reading the metadata from an OP-1 format drumset file. IF-INVALID specifies what to do if DRUMSET can't be parsed as an op-1 drumset file; it can be either :ERROR to signal an error, or NIL to simply return nil."
+  (assert (member if-invalid (list nil :error)) (if-invalid) "IF-INVALID must be either NIL or :ERROR.")
+  (etypecase drumset
+    (bdef
+     (let ((splits (splits-from-op-1-drumset (bdef-file drumset))))
+       (setf (splits-bdef splits) drumset)
+       splits))
+    (string
+     (flet ((not-valid ()
+              (cond ((null if-invalid)
+                     (return-from splits-from-op-1-drumset nil))
+                    ((eql :error if-invalid)
+                     (error "Could not parse ~s as an op-1 drumset." drumset)))))
+       (with-open-file (stream drumset :direction :input :element-type '(unsigned-byte 8) :if-does-not-exist :error)
+         (loop :for peek := (read-byte stream nil nil)
+               :if (null peek)
+                 :do (not-valid)
+               :if (= peek 111) ;; #\o
+                 :do (let ((array (make-array 3 :initial-element nil)))
+                       (read-sequence array stream)
+                       (when (equalp #(112 45 49) array) ;; #\p #\- #\1
+                         (let (accum)
+                           (loop :do (push (read-byte stream nil nil) accum)
+                                 :until (or (null (car accum))
+                                            (eql 125 (car accum))))
+                           (if (null (car accum))
+                               (not-valid)
+                               (return
+                                 (let ((json (jsown:parse (coerce (mapcar #'code-char (nreverse accum)) 'string))))
+                                   (make-splits (mapcar #'op-1-format-to-frame (jsown:val json "start"))
+                                                :ends (mapcar #'op-1-format-to-frame (jsown:val json "end"))
+                                                :unit :samples)))))))))))))
 
 ;;; snd marks
 ;; TODO
