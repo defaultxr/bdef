@@ -39,6 +39,9 @@
 (defmethod bdef-backend-free ((buffer cl-collider::buffer))
   (cl-collider:buffer-free buffer))
 
+(defmethod bdef-load ((env cl-collider::env) &rest rest &key &allow-other-keys)
+  (apply #'bdef-backend-load :cl-collider env rest))
+
 (defmethod bdef-length ((buffer cl-collider::buffer))
   (cl-collider:frames buffer))
 
