@@ -90,3 +90,5 @@
                           (event-value *event* :split))))
       (unless (>= split (bdef:splits-length splits))
         (bdef::splits-event splits split)))))
+
+(export '(psplits psplits-pstream))
