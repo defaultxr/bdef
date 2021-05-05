@@ -140,7 +140,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 (defmethod bdef-file ((this splits))
   (bdef-file (splits-bdef this)))
 
-(defmethod bdef-subseq ((this splits) start &optional end channel)
+(defmethod bdef-subseq ((this splits) &optional start end channel)
   (bdef-subseq (splits-bdef this) start end channel))
 
 (defun splits-points (splits &optional (point :start) (unit :percent))

@@ -38,7 +38,7 @@
 (defmethod bdef-file ((buffer incudine:buffer))
   (incudine:buffer-file buffer))
 
-(defmethod bdef-subseq ((buffer incudine:buffer) start &optional end channel)
+(defmethod bdef-subseq ((buffer incudine:buffer) &optional start end channel)
   ;; FIX: implement channel argument
   (when channel
     (warn "bdef-subseq's CHANNEL argument is not yet implemented for the Incudine backend"))
