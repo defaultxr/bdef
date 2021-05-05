@@ -410,13 +410,13 @@ Note that this function will block if the specified metadata is one of the `*bde
 (defmethod bdef-file (bdef)
   (bdef-file (bdef-buffer bdef)))
 
-(defgeneric bdef-subseq (bdef start &optional end channel)
-  (:documentation "Get the value of the bdef frames from START to END, inclusive. Returns an array of arrays, of all of the buffer's channels, unless a channel is specified with the CHANNEL argument.
+(defgeneric bdef-subseq (bdef &optional start end channel)
+  (:documentation "Get an array of the frames of BDEF's buffer, from START below END. CHANNEL specifies which channel(s) to get; if an integer, returns a single-dimensional array of the specified channel; if a list, returns a multi-dimensional array of the specified channels. Defaults to all frames of all channels.
 
 See also: `bdef-elt'"))
 
-(defmethod bdef-subseq (bdef start &optional end channel)
-  (bdef-subseq (bdef-buffer bdef) start (or end (bdef-length bdef)) channel))
+(defmethod bdef-subseq (bdef &optional (start 0) (end (bdef-length bdef)) channel)
+  (bdef-subseq (bdef-buffer bdef) start end channel))
 
 ;;; derived methods:
 ;; (you shouldn't need to implement these manually in a backend)
