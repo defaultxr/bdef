@@ -447,5 +447,11 @@ See also: `bdef-elt'"))
 
 See also: `bdef-subseq'"))
 
-(defmethod bdef-elt (buffer index &optional channel)
-  (aref (bdef-subseq buffer index index channel) 0))
+(defmethod bdef-elt (bdef index &optional channel)
+  (let ((res (bdef-subseq bdef index (1+ index) channel)))
+    (if (integerp channel)
+        (aref res 0)
+        (let ((len (apply #'* (array-dimensions res))))
+          (make-array (list len)
+                      :initial-contents (loop :for i :from 0 :repeat len
+                                              :collect (row-major-aref res i)))))))
