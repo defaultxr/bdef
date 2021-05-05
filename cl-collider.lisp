@@ -57,13 +57,8 @@
 (defmethod bdef-file ((buffer cl-collider::buffer))
   (cl-collider:path buffer))
 
-(defmethod bdef-subseq ((buffer cl-collider::buffer) start &optional end channel) ;; FIX: this doesn't get all channels (this needs to be fixed in cl-collider)
-  ;; FIX: implement CHANNEL
-  (let* ((end (or end (cl-collider:frames buffer)))
-         (length (- end start)))
-    (make-array (list length)
-                :element-type 'single-float
-                :initial-contents (cl-collider:buffer-get-to-list buffer start length))))
+(defmethod bdef-subseq ((buffer cl-collider::buffer) &optional (start 0) (end (bdef-length buffer)) channel)
+  (cl-collider:buffer-to-array buffer start end channel))
 
 ;;; cl-collider methods
 
