@@ -176,7 +176,7 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
   (with-slots (key buffer metadata) bdef
     (format stream "~s is a ~s.~%  It is ~s seconds long (~s frames), with ~s channels.~%" bdef 'bdef (bdef-duration bdef) (bdef-length bdef) (bdef-channels bdef))
     (format stream "~@[  It contains the audio from the file ~s.~%~]" (bdef-file bdef))
-    (format stream "  Keys that point to this buffer are: ~s~%" (bdef-keys-pointing-to bdef))
+    (format stream "  Keys that point to this buffer are: ~s~%" (bdef-keys bdef))
     (when-let ((meta-keys (bdef-metadata-keys bdef)))
       (format stream "  It has the following metadata:~%")
       (loop :for key :in meta-keys
@@ -312,14 +312,13 @@ Note that this function will block if the specified metadata is one of the `*bde
 (defun (setf bdef-splits) (splits bdef)
   (setf (bdef-metadata (ensure-bdef bdef) :splits) splits))
 
-(defun bdef-keys-pointing-to (bdef &optional (dictionary *bdef-dictionary*))
-  "Get a list of all the keys in `*bdef-dictionary*' that point to this bdef."
+(defun bdef-keys (bdef &optional (dictionary *bdef-dictionary*))
+  "Get a list of all the keys in DICTIONARY that point to BDEF."
   (when-let ((bdef (ensure-bdef bdef)))
-    (loop
-      :for key :being :the hash-keys :of dictionary
-        :using (hash-value value)
-      :if (eq value bdef)
-        :collect key)))
+    (loop :for key :being :the hash-keys :of dictionary
+            :using (hash-value value)
+          :if (eq value bdef)
+            :collect key)))
 
 (defun bdef-free (bdef &optional (dictionary *bdef-dictionary*))
   "Free a buffer from the bdef dictionary, removing all keys that point to it."
@@ -328,7 +327,7 @@ Note that this function will block if the specified metadata is one of the `*bde
     (string (bdef-free (bdef bdef)))
     (bdef
      (bdef-backend-free (bdef-buffer bdef))
-     (let ((keys (bdef-keys-pointing-to bdef dictionary)))
+     (let ((keys (bdef-keys bdef dictionary)))
        (dolist (key keys)
          (remhash key dictionary))))))
 
