@@ -114,7 +114,7 @@ See also: `bdef-backend-load'"))
 
 (define-bdef-auto-metadata :onsets
   (unless (< (bdef-duration bdef) 1)
-    (splits-from-aubio-onsets bdef)))
+    (splits-from-aubio bdef :utility :onset)))
 
 (define-bdef-auto-metadata :tempo
   (when-let* ((path (bdef-file bdef))

@@ -122,27 +122,6 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
     (bdef
      (splits-length (bdef-splits object)))))
 
-(defmethod bdef-buffer ((this splits))
-  (bdef-buffer (splits-bdef this)))
-
-(defmethod bdef-length ((this splits))
-  (bdef-length (splits-bdef this)))
-
-(defmethod bdef-sample-rate ((this splits))
-  (bdef-sample-rate (splits-bdef this)))
-
-(defmethod bdef-channels ((this splits))
-  (bdef-channels (splits-bdef this)))
-
-(defmethod bdef-id ((this splits))
-  (bdef-id (splits-bdef this)))
-
-(defmethod bdef-file ((this splits))
-  (bdef-file (splits-bdef this)))
-
-(defmethod bdef-subseq ((this splits) &optional start end channel)
-  (bdef-subseq (splits-bdef this) start end channel))
-
 (defun splits-points (splits &optional (point :start) (unit :percent))
   "Get the split points for POINTS (i.e. start, end, loops, comments) from SPLITS converted to UNIT (i.e. percent, samples, seconds)."
   (assert (typep splits 'splits) (splits))
@@ -194,6 +173,40 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
        ((:sample :frame :samples :frames) (bdef-length object))
        ((:second :seconds) (bdef-duration object))))))
 
+(defgeneric splits-export (splits file format)
+  (:documentation "Write a `splits' object to a file in another format."))
+
+(defmethod splits-export ((bdef bdef) file format)
+  (splits-export (bdef-splits bdef) file format))
+
+(defmethod splits-export (object (file string) format)
+  (with-open-file (stream file :direction :output :if-exists :supersede)
+    (splits-export object stream format)))
+
+(defmethod splits-export (object (file pathname) format)
+  (splits-export object (namestring (truename file)) format))
+
+(defmethod bdef-buffer ((this splits))
+  (bdef-buffer (splits-bdef this)))
+
+(defmethod bdef-length ((this splits))
+  (bdef-length (splits-bdef this)))
+
+(defmethod bdef-sample-rate ((this splits))
+  (bdef-sample-rate (splits-bdef this)))
+
+(defmethod bdef-channels ((this splits))
+  (bdef-channels (splits-bdef this)))
+
+(defmethod bdef-id ((this splits))
+  (bdef-id (splits-bdef this)))
+
+(defmethod bdef-file ((this splits))
+  (bdef-file (splits-bdef this)))
+
+(defmethod bdef-frames ((this splits) &key start end channels)
+  (bdef-frames (splits-bdef this) :start start :end end :channels channels))
+
 ;;; splits / analysis methods
 
 ;; filename / metadata
@@ -220,50 +233,49 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 ;;; aubio
 
-(defparameter *aubio-python-directory* #P"~/misc/aubio/python/demos/" ;; FIX: can we do without this?
-              "The path to Aubio's \"demos\" directory.")
+(defvar *aubio-python-directory* #P"~/misc/aubio/python/demos/" ;; FIX: can we do without this?
+        "The path to Aubio's \"demos\" directory.")
 
-;; FIX: maybe just make a general function for all the aubio commands?
-(defun aubio-onsets-read (file &rest args &key (algorithm :default) (threshold 0.3) (silence -90) &allow-other-keys)
-  "Use the \"aubioonset\" utility to get a list of onsets in FILE. FILE can be a path to a file or a cl-collider buffer object. The returned list gives onsets in seconds from the start of the file."
-  (declare (ignore algorithm threshold silence args)) ;; FIX: actually implement these arguments
-  ;; FIX: uiop:run-program allows you to read output as a stream. that might be better?
-  (let ((file (ensure-readable-audio-file
-               (if (or (stringp file)
-                       (pathnamep file))
-                   file
-                   (bdef-file file)))))
-    (labels ((split (string &optional list)
-               (let ((start (position #\newline string)))
-                 (if start
-                     (split (subseq string (1+ start)) (append list (list (subseq string 0 start))))
-                     (append list (list string))))))
-      (mapcar #'read-from-string ;; use "aubiocut -b FILE" to get a file cut by beats
-              (split (uiop:run-program (list "aubioonset" (namestring (truename file)))
-                                       :output '(:string :stripped t)))))))
+(defun aubio-onsets (file &rest args &key (utility :onset) (algorithm :hfc) (threshold 0.3) (silence -90) (minimum-interval 0.012) (buf-size 512) (hop-size 256) &allow-other-keys)
+  "Use the \"aubioonset\" or \"aubiotrack\" utility to get a list of onset points in FILE in seconds. FILE can be a filename, a bdef, or a supported buffer object. UTILITY specifies whether to use Aubio's \"onset\" or \"track\" utility. The rest of the arguments are sent as parameters to the Aubio utility in use; see Aubio's documentation for more information on them."
+  (declare (ignore args))
+  (check-type threshold float)
+  (check-type silence number)
+  (check-type minimum-interval (real 0))
+  (check-type buf-size (integer 0))
+  (check-type hop-size (integer 0))
+  (mapcar #'parse-float:parse-float
+          (split-string
+           (uiop:run-program (list (ecase utility
+                                     (:onset "aubioonset")
+                                     (:track "aubiotrack"))
+                                   "--input" (ensure-readable-audio-file
+                                              (uiop:native-namestring (if (bdef-p file)
+                                                                          (bdef-file file)
+                                                                          file)))
+                                   "--bufsize" (write-to-string buf-size)
+                                   "--hopsize" (write-to-string hop-size)
+                                   "--onset" (string-downcase algorithm)
+                                   "--onset-threshold" (write-to-string threshold)
+                                   "--minioi" (write-to-string minimum-interval)
+                                   "--silence" (write-to-string silence))
+                             :output (list :string :stripped t))
+           :char-bag (list #\newline))))
 
-(defun splits-from-aubio-onsets (file &rest args &key &allow-other-keys)
-  "Make a `splits' from onsets data generated by Aubio."
-  (etypecase file
-    (bdef (splits-from-aubio-onsets (bdef-file file)))
-    (string (apply 'make-splits
-                   (coerce (apply 'aubio-onsets-read file args) 'vector) ;; FIX: just generate as a vector?
-                   :unit :seconds
-                   (when (typep file 'bdef)
-                     (list :bdef file))))))
+(defun splits-from-aubio (file &rest args &key &allow-other-keys)
+  "Make a `splits' from onsets data generated by Aubio by using the `aubio-onsets' function.
 
-(defun splits-from-aubio-track (file &key (buf-size 512) (hop-size 256) (silence-threshold -90)) ;; FIX: make a more general aubio function for any of its commands?
-  (make-splits (mapcar 'parse-float:parse-float
-                       (split-string
-                        (uiop:run-program (list "aubiotrack"
-                                                "-i" (namestring (truename file))
-                                                "-B" (write-to-string buf-size)
-                                                "-H" (write-to-string hop-size)
-                                                "-s" (write-to-string silence-threshold)
-                                                "-T" "samples")
-                                          :output '(:string :stripped t))
-                        :char-bag (list #\newline)))
-               :unit :samples))
+See also: `splits', `aubio-onsets'"
+  (apply #'make-splits
+         (apply #'aubio-onsets file args)
+         :unit :seconds
+         (when (bdef-p file)
+           (list :bdef file))))
+
+(uiop:with-deprecation (:style-warning)
+  (defun splits-from-aubio-onsets (file &rest args &key &allow-other-keys)
+    "Deprecated alias for (splits-from-aubio FILE :utility :onset ...)."
+    (apply #'splits-from-aubio file :utility :onset args)))
 
 (defun aubio-demo-bpm (file &key (mode :default))
   "Use aubio's demo_bpm_extract.py to get the bpm of FILE."
@@ -287,46 +299,6 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
               (split (uiop:run-program (list "python" (namestring (merge-pathnames *aubio-python-directory* "demo-tempo.py")) (namestring (truename file)))
                                        :output '(:string :stripped t)))))))
 
-(defgeneric splits-export (splits file format)
-  (:documentation "Write a `splits' object to a file in another format."))
-
-(defmethod splits-export ((bdef bdef) file format)
-  (splits-export (bdef-splits bdef) file format))
-
-(defmethod splits-export (object (file string) format)
-  (with-open-file (stream file :direction :output :if-exists :supersede)
-    (splits-export object stream format)))
-
-(defmethod splits-export (object (file pathname) format)
-  (splits-export object (namestring (truename file)) format))
-
-(defmethod splits-export ((splits splits) (stream stream) (format (eql :audacity)))
-  (loop :for idx :from 0 :below (length splits)
-     :for start = (splits-point splits idx :start :second)
-     :for end = (or (splits-point splits idx :end :second)
-                    (ignore-errors (splits-point splits (1+ idx) :start :second)) ;; FIX: just use ensure-end, (or maybe integrate ensure-end into the regular splits-ends function?)
-                    (end-point splits :second))
-     :for comment = (splits-point splits idx :comment)
-     :do (format stream "~a~c~a~c~a~%" start #\tab end #\tab (or comment idx))))
-
-(defun aubio-track-to-audacity-labels (file) ;; FIX: remove this and just make a function to generate a `splits' from aubiotrack, since `audacity-labels-from-splits' already exists.
-  "Generate an Audacity labels file from the output of aubio's aubiotrack on FILE."
-  (let ((beats-times (mapcar 'parse-float:parse-float
-                             (split-string (uiop:run-program (list "aubiotrack"
-                                                                   "-B" "4096"
-                                                                   "-H" "128"
-                                                                   "-s" "-20"
-                                                                   (namestring (truename file)))
-                                                             :output '(:string :stripped t))
-                                           :char-bag (list #\newline)))))
-    (with-open-file (s #P"~/label.txt" :direction :output :if-exists :supersede)
-      (let ((last 0.0))
-        (loop :for time :in beats-times
-              :for i :from 0 :below (length beats-times)
-              :do (progn
-                    (format s "~s~c~s~c~s~%" last #\tab time #\tab i)
-                    (setf last time)))))))
-
 ;;; bpm-tools
 
 (defun bpm-tools-bpm (file)
@@ -347,22 +319,19 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
           :collect (caddr parsed) :into comments
           :finally (return (make-splits starts :ends ends :comments comments :unit :seconds)))))
 
-(defun audacity-labels-from-splits (splits &optional (file #P"~/label.txt"))
-  "Export a `splits' object as an Audacity labels file."
-  (labels ((writer (stream)
-             (loop :for idx :from 0 :below (length splits)
-                :for start = (splits-point splits idx :start :second)
-                :for end = (or (splits-point splits idx :end :second)
-                               (ignore-errors (splits-point splits (1+ idx) :start :second))
-                               (end-point splits :second))
-                :for comment = (splits-point splits idx :comment)
-                :do (format stream "~a~c~a~c~a~%" start #\tab end #\tab (or comment idx)))))
-    (etypecase file
-      ((or pathname string)
-       (with-open-file (stream file :direction :output :if-exists :supersede)
-         (writer stream)))
-      (stream
-       (writer file)))))
+(defmethod splits-export ((splits splits) (stream stream) (format (eql :audacity)))
+  (loop :for idx :from 0 :below (length splits)
+        :for start := (splits-point splits idx :start :second)
+        :for end := (or (splits-point splits idx :end :second)
+                        (ignore-errors (splits-point splits (1+ idx) :start :second)) ;; FIX: just use ensure-end, (or maybe integrate ensure-end into the regular splits-ends function?)
+                        (end-point splits :second))
+        :for comment := (splits-point splits idx :comment)
+        :do (format stream "~a~c~a~c~a~%" start #\tab end #\tab (or comment idx))))
+
+(uiop:with-deprecation (:style-warning)
+  (defun audacity-labels-from-splits (splits &optional (file #P"~/label.txt"))
+    "Deprecated alias for (splits-export SPLITS FILE :audacity)."
+    (splits-export splits file :audacity)))
 
 ;;; op-1 drumsets
 ;; https://github.com/padenot/libop1/blob/master/src/op1_drum_impl.cpp
