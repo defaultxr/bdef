@@ -31,8 +31,11 @@
    #:bdef-dur
    #:bdef-splits
 
-   #:bdef-elt
+   #:bdef-frames
    #:bdef-subseq
+
+   #:bdef-frame
+   #:bdef-elt
 
    #:bdef-metadata
    #:bdef-metadata-keys

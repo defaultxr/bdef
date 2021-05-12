@@ -14,10 +14,10 @@
   (= 0 (length this)))
 
 (defmethod sequence:elt ((this bdef) index)
-  (bdef-elt this index))
+  (bdef-frame this index))
 
 (defmethod sequence:subseq ((this bdef) start &optional end)
-  (bdef-subseq this start end))
+  (bdef-frames this :start start :end end))
 
 ;;; splits
 

@@ -251,7 +251,7 @@ To write your own backend, you will need to implement the following methods on y
 - ~bdef-channels~
 - ~bdef-id~ (optional if your backend doesn't use buffer IDs)
 - ~bdef-file~ (optional if your backend doesn't keep track of what file a buffer was loaded from)
-- ~bdef-subseq~
+- ~bdef-frames~
 
 All other functionality is derived from those functions.
 
@@ -260,6 +260,6 @@ For the user's convenience, you might also want to define methods on the ~bdef~ 
 * Future
 
 - Fix the various minor/not-so-minor issues marked with "FIX" in the code.
-- We have ~bdef-subseq~ to get buffer data; we should have support for setting buffer data as well.
+- We have ~bdef-frames~ to get buffer data; we should have support for setting buffer data as well.
 - Support for configurable pathname shortcuts. (i.e. set ~foo~ as a shortcut to ~/a/long/path/name/~, then provide ~"foo/bar.wav"~ instead of ~"/a/long/path/name/bar.wav"~.)
 - "Dynamic" splits; i.e. define a set of splits as "this region in four equal-length pieces" rather than all splits being immediately "baked" as specific points.

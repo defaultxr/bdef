@@ -38,10 +38,10 @@
 (defmethod bdef-file ((buffer incudine:buffer))
   (incudine:buffer-file buffer))
 
-(defmethod bdef-subseq ((buffer incudine:buffer) &optional start end channel)
-  ;; FIX: implement channel argument
-  (when channel
-    (warn "bdef-subseq's CHANNEL argument is not yet implemented for the Incudine backend"))
+(defmethod bdef-frames ((buffer incudine:buffer) &key (start 0) (end (bdef-length buffer)) channels)
+  ;; FIX: implement channels argument
+  (when channels
+    (warn "bdef-frames's CHANNELS argument is not yet implemented for the Incudine backend"))
   (subseq (incudine:buffer->array buffer) start end))
 
 ;;; generics

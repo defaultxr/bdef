@@ -456,16 +456,21 @@ See also: `bdef-frame'"))
         (tempo (bdef-tempo bdef)))
     (* time tempo)))
 
-(defgeneric bdef-elt (bdef index &optional channel)
+(defgeneric bdef-frame (bdef index &optional channel)
   (:documentation "Get the value of the bdef frame at INDEX. Without CHANNEL, return an array of the specified index in all channels. With CHANNEL, return just the value as a number.
 
-See also: `bdef-subseq'"))
+See also: `bdef-frames'"))
 
-(defmethod bdef-elt (bdef index &optional channel)
-  (let ((res (bdef-subseq bdef index (1+ index) channel)))
-    (if (integerp channel)
+(defmethod bdef-frame (bdef index &optional channels)
+  (let ((res (bdef-frames bdef :start index :end (1+ index) :channels channels)))
+    (if (integerp channels)
         (aref res 0)
         (let ((len (apply #'* (array-dimensions res))))
           (make-array (list len)
                       :initial-contents (loop :for i :from 0 :repeat len
                                               :collect (row-major-aref res i)))))))
+
+(uiop:with-deprecation (:style-warning)
+  (defun bdef-elt (bdef index &optional channel)
+    "Deprecated alias for `bdef-frame'."
+    (bdef-frame bdef index channel)))

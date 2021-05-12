@@ -62,8 +62,8 @@
 (defmethod bdef-file ((buffer cl-collider::buffer))
   (cl-collider:path buffer))
 
-(defmethod bdef-subseq ((buffer cl-collider::buffer) &optional (start 0) (end (bdef-length buffer)) channel)
-  (cl-collider:buffer-to-array buffer start end channel))
+(defmethod bdef-frames ((buffer cl-collider::buffer) &key (start 0) (end (bdef-length buffer)) channels)
+  (cl-collider:buffer-to-array buffer :start start :end end :channels channels))
 
 ;;; cl-collider methods
 
