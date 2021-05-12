@@ -13,6 +13,7 @@
    #:*bdef-dictionary*
 
    #:bdef
+   #:bdef-p
    #:bdef-key
    #:bdef-buffer
    #:all-bdefs

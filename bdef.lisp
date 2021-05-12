@@ -182,6 +182,12 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
       (loop :for key :in meta-keys
             :do (format stream "    ~s -> ~s~%" key (bdef-metadata bdef key)))))) ;; FIX: use format's indentation directive?
 
+(defun bdef-p (object)
+  "True if OBJECT is a bdef.
+
+See also: `bdef'"
+  (typep object 'bdef))
+
 (defgeneric bdef-key (bdef)
   (:documentation "The \"key\" (name) of this bdef."))
 
@@ -204,7 +210,7 @@ Without a VALUE, bdef will look up the key and return the buffer that already ex
                     (stringp key)))
           (key)
           "Cannot use a string as a key.")
-  (when (typep key 'bdef)
+  (when (bdef-p key)
     (return-from bdef key))
   (let ((key (bdef-key-cleanse key))
         (value (bdef-key-cleanse value)))
@@ -238,7 +244,7 @@ See also: `bdef-dictionary-keys'"
   (if include-aliases
       (hash-table-keys *bdef-dictionary*)
       (loop :for i :being :the hash-keys :of *bdef-dictionary*
-            :if (typep (gethash i *bdef-dictionary*) 'bdef)
+            :if (bdef-p (gethash i *bdef-dictionary*))
               :collect i)))
 
 (defun bdef-dictionary-keys (&key (include-redirects t) (dictionary *bdef-dictionary*))
@@ -249,12 +255,12 @@ See also: `all-bdefs'"
     (if include-redirects
         keys
         (loop :for key :in keys
-              :if (typep (gethash key dictionary) 'bdef)
+              :if (bdef-p (gethash key dictionary))
                 :collect key))))
 
 (defun ensure-bdef (object) ;; FIX: make sure this (or equivalent, i.e. bdef-buffer) is used in all bdef functions
   "Return OBJECT if object is a bdef, otherwise look up a bdef with OBJECT as its key."
-  (if (typep object 'bdef)
+  (if (bdef-p object)
       object
       (bdef object)))
 
