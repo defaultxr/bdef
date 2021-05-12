@@ -50,6 +50,7 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
 
 ;; FIX: just parse the json from the following command instead:
 ;; ffprobe -v quiet -print_format json -show_format -show_streams FILE
+;; https://wiki.multimedia.cx/index.php/FFmpeg_Metadata
 (defun file-metadata (file)
   "Get the metadata of FILE as a plist."
   (multiple-value-bind (stdout stderr)
@@ -416,16 +417,23 @@ Note that this function will block if the specified metadata is one of the `*bde
 (defmethod bdef-file (bdef)
   (bdef-file (bdef-buffer bdef)))
 
-(defgeneric bdef-subseq (bdef &optional start end channel)
-  (:documentation "Get an array of the frames of BDEF's buffer, from START below END. CHANNEL specifies which channel(s) to get; if an integer, returns a single-dimensional array of the specified channel; if a list, returns a multi-dimensional array of the specified channels. Defaults to all frames of all channels.
+(defgeneric bdef-frames (bdef &key start end channels)
+  (:documentation "Get an array of the frames of BDEF's buffer, from START below END. CHANNELS specifies which channel(s) to get; if an integer, returns a single-dimensional array of the specified channel; if a list, returns a multi-dimensional array of the specified channels. Defaults to all frames of all channels.
 
-See also: `bdef-elt'"))
+See also: `bdef-frame'"))
 
-(defmethod bdef-subseq (bdef &optional (start 0) (end (bdef-length bdef)) channel)
-  (bdef-subseq (bdef-buffer bdef) start end channel))
+(defmethod bdef-frames ((bdef bdef) &key (start 0) (end (bdef-length bdef)) channels)
+  (bdef-frames (bdef-buffer bdef) :start start :end end :channels channels))
+
+(uiop:with-deprecation (:style-warning)
+  (defun bdef-subseq (bdef &optional (start 0) (end (bdef-length bdef)) channel)
+    "Deprecated alias for `bdef-frames'."
+    (bdef-frames bdef :start start :end end :channels channel)))
 
 ;;; derived methods:
-;; (you shouldn't need to implement these manually in a backend)
+;; these can be overridden in a backend if a faster/more performant way is
+;; possible, however you normally don't need to implement them as their default
+;; methods fall back on the "required" bdef methods above.
 
 (defgeneric bdef-duration (bdef)
   (:documentation "Get the duration of the bdef in seconds."))
