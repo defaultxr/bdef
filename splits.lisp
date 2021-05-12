@@ -257,7 +257,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
                                    "--hopsize" (write-to-string hop-size)
                                    "--onset" (string-downcase algorithm)
                                    "--onset-threshold" (write-to-string threshold)
-                                   "--minioi" (write-to-string minimum-interval)
+                                   "-M" (write-to-string minimum-interval)
                                    "--silence" (write-to-string silence))
                              :output (list :string :stripped t))
            :char-bag (list #\newline))))
