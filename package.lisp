@@ -10,7 +10,6 @@
    
    #:*bdef-temporary-directory*
    #:*bdef-backends*
-   #:*bdef-dictionary*
 
    #:bdef
    #:bdef-p
