@@ -14,14 +14,14 @@
 
 (defmethod backend-convert-object ((object symbol) key (backend (eql :supercollider)))
   (declare (ignore key))
-  (let ((bdef (bdef::bdef-get object)))
+  (let ((bdef (bdef::bdef-ref object)))
     (if bdef
         (bdef:bdef-id (bdef:bdef-buffer bdef))
         object)))
 
 (defmethod backend-convert-object ((object symbol) key (backend (eql :incudine)))
   (declare (ignore key))
-  (let ((bdef (bdef::bdef-get object)))
+  (let ((bdef (bdef::bdef-ref object)))
     (if bdef
         (bdef:bdef-buffer bdef)
         object)))
@@ -82,7 +82,7 @@
                                    (bdef::bdef
                                     (bdef:bdef-splits buffer))
                                    (symbol
-                                    (bdef:bdef-splits (bdef::bdef-get buffer)))
+                                    (bdef:bdef-splits (bdef::bdef-ref buffer)))
                                    (t
                                     nil))))))
                (split (if split

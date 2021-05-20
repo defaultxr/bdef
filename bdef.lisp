@@ -1,5 +1,4 @@
 ;;;; bdef.lisp
-;; FIX: use uiop:with-temporary-file to generate temporary files?
 ;; FIX: allow a sound to be loaded as a wavetable and a normal sound at the same time
 
 (in-package #:bdef)
@@ -12,7 +11,7 @@
 
 (defvar *ffmpeg-path*
   #+(or linux darwin) (ignore-errors (uiop:run-program "which ffmpeg" :output (list :string :stripped t)))
-  #+windows (concat (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/") ;; FIX; this is almost certainly wrong
+  #+windows (concat (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/")
   "The path to ffmpeg, or nil if ffmpeg could not be found.")
 
 (defvar *bdef-backends* (list)
@@ -26,7 +25,7 @@ Note that backends are made available by loading the relevant bdef subsystem wit
   "If PATH ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored under `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
 
 See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
-  (let* ((path (truename path))
+  (let* ((path (uiop:native-namestring path))
          (ext (pathname-type path))
          (file-metadata (file-metadata path)))
     (values
@@ -40,6 +39,10 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
                                    :name (pathname-name path)
                                    :type (string-downcase (symbol-name (car extensions))))))
             (unless (probe-file output-filename)
+              (if *ffmpeg-path*
+                  (unless (probe-file *ffmpeg-path*)
+                    (error "ffmpeg binary not found at ~s; you will need to update ~s to point to ffmpeg." *ffmpeg-path* '*ffmpeg-path*))
+                  (error "~s is nil; you will need to set it to point to your ffmpeg binary." '*ffmpeg-path*))
               (ensure-directories-exist output-directory)
               (uiop:run-program (list *ffmpeg-path*
                                       "-i" (namestring path)
@@ -54,7 +57,7 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
 (defun file-metadata (file)
   "Get the metadata of FILE as a plist."
   (multiple-value-bind (stdout stderr)
-      (uiop:run-program (list *ffmpeg-path* "-i" (namestring (truename file)) "-f" "ffmetadata" "-")
+      (uiop:run-program (list *ffmpeg-path* "-i" (uiop:native-namestring file) "-f" "ffmetadata" "-")
                         :output (list :string :stripped t)
                         :error-output (list :string :stripped t)
                         :ignore-error-status t)
@@ -162,8 +165,28 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
 
 ;;; bdef
 
+(defun bdef-ensure-key (key)
+  "Expands strings and pathnames to absolute filenames as strings. Other values are simply returned as is."
+  (if (typep key '(or string pathname))
+      (uiop:native-namestring key)
+      key))
+
+(defgeneric bdef-key (bdef)
+  (:documentation "The key (\"name\") of the bdef."))
+
+(defgeneric bdef-id (bdef)
+  (:documentation "The ID number of this bdef, or nil if the bdef's backend does not support IDs."))
+
+(defgeneric bdef-buffer (object)
+  (:documentation "The actual buffer object that the bdef refers to."))
+
+(defgeneric bdef-metadata (bdef &optional key)
+  (:documentation "Get the value of BDEF's metadata for KEY. Returns true as a second value if the metadata had an entry for KEY, or false if it did not.
+
+Note that this function will block if the specified metadata is one of the `*bdef-auto-metadata*' that hasn't finished being generated yet."))
+
 (defclass bdef ()
-  ((key :initarg :key :reader bdef-key :type symbol :documentation "The name given to the bdef.")
+  ((key :initarg :key :reader bdef-key :type string-designator :documentation "The key (\"name\") of the bdef.")
    (buffer :initarg :buffer :reader bdef-buffer :documentation "The actual buffer object that the bdef refers to.")
    (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the bdef, accessible with the `bdef-metadata' function.")))
 
@@ -178,10 +201,10 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
     (format stream "~s is a ~s.~%  It is ~s seconds long (~s frames), with ~s channels.~%" bdef 'bdef (bdef-duration bdef) (bdef-length bdef) (bdef-channels bdef))
     (format stream "~@[  It contains the audio from the file ~s.~%~]" (bdef-file bdef))
     (format stream "  Keys that point to this buffer are: ~s~%" (bdef-keys bdef))
-    (when-let ((meta-keys (bdef-metadata-keys bdef)))
+    (when-let ((meta-keys (keys (bdef-metadata bdef))))
       (format stream "  It has the following metadata:~%")
       (loop :for key :in meta-keys
-            :do (format stream "    ~s -> ~s~%" key (bdef-metadata bdef key)))))) ;; FIX: use format's indentation directive?
+            :do (format stream "    ~s -> ~s~%" key (bdef-metadata bdef key))))))
 
 (defun bdef-p (object)
   "True if OBJECT is a bdef.
@@ -189,123 +212,155 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
 See also: `bdef'"
   (typep object 'bdef))
 
-(defgeneric bdef-key (bdef)
-  (:documentation "The \"key\" (name) of this bdef."))
-
-(defgeneric bdef-id (bdef)
-  (:documentation "The ID number of this bdef, or nil if the bdef's backend does not support IDs."))
-
-(defun bdef-key-cleanse (key)
-  "Expands file names to their full unabbreviated forms as strings. Other values are simply returned as-is."
-  (typecase key
-    (pathname (namestring (truename key)))
-    (string (bdef-key-cleanse (pathname key)))
-    (otherwise key)))
+(defvar *bdef-dictionary* (make-hash-table :test #'equal)
+  "The global dictionary of bdefs.")
 
 ;; FIX: add 'metadata' key. it should probably add to the default metadata fields. if the user doesn't want them, they can provide 'nil' for the key they don't want generated.
-(defun bdef (key &optional (value nil value-provided-p) &key (num-channels 2) (wavetable nil) metadata)
+(defun bdef (key &optional (value nil value-provided-p) &key (num-channels 2) (wavetable nil) metadata backend (dictionary *bdef-dictionary*))
   "Automaticaly load a buffer or reference one that's already loaded. KEY is the name to give the buffer in the bdef dictionary. VALUE is the path to the file to load, or the data to construct the buffer from (i.e. an envelope, a list of frames, etc).
 
 Without a VALUE, bdef will look up the key and return the buffer that already exists. If the KEY is a string, it's assumed to be a pathname and will be loaded automatically if it's not already in memory."
-  (assert (not (and value
-                    (stringp key)))
-          (key)
-          "Cannot use a string as a key.")
+  (assert key (key) "~s cannot have nil as its key." 'bdef)
+  (assert (not (equal key value)) (key value) "Cannot set a bdef to itself.")
   (when (bdef-p key)
     (return-from bdef key))
-  (let ((key (bdef-key-cleanse key))
-        (value (bdef-key-cleanse value)))
-    (if value-provided-p
-        (let ((res (bdef-set key (if (bdef-get value)
-                                     value
-                                     (bdef-load value :num-channels num-channels :wavetable wavetable)))))
-          (doplist (key value metadata)
-            (setf (bdef-metadata res key) value))
-          res)
-        (or (bdef-get key)
-            (if (symbolp key)
-                (error "No bdef with the key ~a defined." key)
-                (bdef-load key))))))
+  (let* ((key (bdef-ensure-key key))
+         (value (bdef-ensure-key value))
+         (bdef (if value-provided-p
+                   (setf (bdef-ref key dictionary)
+                         (if (bdef-ref value dictionary)
+                             value
+                             (bdef-load value :num-channels num-channels :wavetable wavetable :backend backend)))
+                   (or (bdef-ref key dictionary)
+                       (if (symbolp key)
+                           (error "No bdef defined with key ~s." key)
+                           (bdef-load key))))))
+    (when bdef
+      (doplist (key value metadata bdef)
+        (setf (bdef-metadata bdef key) (if (functionp value)
+                                           (funcall value bdef)
+                                           value))))))
 
-(defgeneric bdef-buffer (object)
-  (:documentation "The actual buffer object that the bdef refers to."))
+(defun find-bdef (key &optional (errorp nil) (dictionary *bdef-dictionary*))
+  "Get the bdef named KEY. If one by that name doesn't exist, return nil, or raise an error if ERRORP is true.
+
+See also: `bdef', `all-bdefs'"
+  (etypecase key
+    (bdef
+     key)
+    (string-designator
+     (or (bdef-ref key dictionary)
+         (when errorp
+           (error "Could not find a bdef named ~s." key))))))
+
+(defun bdef-ref (key &optional (dictionary *bdef-dictionary*))
+  "Retrieve a bdef from DICTIONARY."
+  (let* ((key (bdef-ensure-key key))
+         (result (gethash key dictionary)))
+    (if (and result
+             (typep result 'string-designator))
+        (bdef-ref result dictionary)
+        result)))
+
+(defun (setf bdef-ref) (value key &optional (dictionary *bdef-dictionary*))
+  "Set the KEY in the bdef dictionary DICTIONARY to VALUE."
+  (setf (gethash key dictionary) (bdef-ensure-key value)))
+
+(defun all-bdefs (&key include-aliases (dictionary *bdef-dictionary*))
+  "Get a list of the names of all bdefs in DICTIONARY. With INCLUDE-ALIASES, include keys that point to other keys (i.e. aliases).
+
+See also: `bdef', `find-bdef', `ensure-bdef'"
+  (if include-aliases
+      (hash-table-keys dictionary)
+      (loop :for key :being :the hash-keys :of dictionary
+            :if (bdef-p (gethash key dictionary))
+              :collect key)))
+
+(defun ensure-bdef (object)
+  "Return OBJECT if it is a bdef, otherwise find the bdef pointed to by OBJECT."
+  (etypecase object
+    (bdef object)
+    (string-designator (find-bdef object t))))
+
+(uiop:with-deprecation (:style-warning)
+  (defun bdef-get (key &optional (dictionary *bdef-dictionary*))
+    "Deprecated alias for `bdef-ref'."
+    (bdef-ref key dictionary)))
+
+(uiop:with-deprecation (:style-warning)
+  (defun bdef-set (key value &optional (dictionary *bdef-dictionary*))
+    "Deprecated alias for `(setf bdef-ref)'."
+    (setf (bdef-ref key dictionary) value)))
+
+(defmethod bdef-key ((symbol symbol))
+  (bdef-key (ensure-bdef symbol)))
+
+(defmethod bdef-key ((string string))
+  (bdef-key (ensure-bdef string)))
+
+(defmethod bdef-key ((null null))
+  nil)
 
 (defmethod bdef-buffer ((symbol symbol))
   (bdef-buffer (ensure-bdef symbol)))
 
-(defvar *bdef-dictionary* (make-hash-table :test #'equal)
-  "The global dictionary of bdefs.")
+(defmethod bdef-buffer ((string string))
+  (bdef-buffer (ensure-bdef string)))
 
-(defun all-bdefs (&optional include-aliases)
-  "Return a list of the names of all bdefs loaded.
+(defmethod bdef-buffer ((null null))
+  nil)
 
-Note that this doesn't include aliases (i.e. bdef keys that point to another key) unless INCLUDE-ALIASES is true.
+(defmethod bdef-metadata ((symbol symbol) &optional key)
+  (bdef-metadata (ensure-bdef symbol) key))
 
-See also: `bdef-dictionary-keys'"
-  (if include-aliases
-      (hash-table-keys *bdef-dictionary*)
-      (loop :for i :being :the hash-keys :of *bdef-dictionary*
-            :if (bdef-p (gethash i *bdef-dictionary*))
-              :collect i)))
+(defmethod bdef-metadata ((string string) &optional key)
+  (bdef-metadata (ensure-bdef string) key))
 
-(defun bdef-dictionary-keys (&key (include-redirects t) (dictionary *bdef-dictionary*))
-  "Return a list of all the keys for the bdef dictionary DICTIONARY.
+(defmethod bdef-metadata ((null null) &optional key)
+  nil)
 
-See also: `all-bdefs'"
-  (let ((keys (hash-table-keys dictionary)))
-    (if include-redirects
-        keys
-        (loop :for key :in keys
-              :if (bdef-p (gethash key dictionary))
-                :collect key))))
+(defmethod bdef-metadata ((bdef bdef) &optional key)
+  (if key
+      (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
+        (funcall (cadr dyn-meta) bdef)
+        (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
+          (values
+           (if val
+               (if (typep val 'eager-future2:future)
+                   (setf (bdef-metadata bdef key) (eager-future2:yield val))
+                   val)
+               val)
+           present-p)))
+      (slot-value bdef 'metadata)))
 
-(defun ensure-bdef (object) ;; FIX: make sure this (or equivalent, i.e. bdef-buffer) is used in all bdef functions
-  "Return OBJECT if object is a bdef, otherwise look up a bdef with OBJECT as its key."
-  (if (bdef-p object)
-      object
-      (bdef object)))
+(defmethod (setf bdef-metadata) (value (symbol symbol) &optional key)
+  (setf (bdef-metadata (ensure-bdef symbol) key) value))
 
-(defun bdef-get (key &optional (dictionary *bdef-dictionary*))
-  "Get the value of KEY in the bdef dictionary DICTIONARY."
-  (let* ((key (bdef-key-cleanse key))
-         (result (gethash key dictionary)))
-    (if (and (not (null result))
-             (typep result '(or string symbol)))
-        (bdef-get result dictionary)
-        result)))
+(defmethod (setf bdef-metadata) (value (string string) &optional key)
+  (setf (bdef-metadata (ensure-bdef string) key) value))
 
-(defun bdef-metadata (bdef &optional key)
-  "Get the value of BDEF's metadata for KEY. Returns true as a second value if the metadata had an entry for KEY, or false if it did not.
+(defmethod (setf bdef-metadata) (value (null null) &optional key)
+  nil)
 
-Note that this function will block if the specified metadata is one of the `*bdef-auto-metadata*' that hasn't finished being generated yet."
-  (let ((bdef (ensure-bdef bdef)))
-    (if key
-        (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
-          (funcall (cadr dyn-meta) bdef)
-          (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
-            (values
-             (if val
-                 (if (typep val 'eager-future2:future)
-                     (setf (bdef-metadata bdef key) (eager-future2:yield val))
-                     val)
-                 val)
-             present-p)))
-        (slot-value bdef 'metadata))))
+(defmethod (setf bdef-metadata) (value (bdef bdef) &optional key)
+  (if key
+      (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
+        (funcall (caddr dyn-meta) bdef value)
+        (with-slots (metadata) bdef
+          (when (and (typep value 'splits)
+                     (null (splits-bdef value)))
+            (setf (splits-bdef value) bdef)
+            (unless (gethash :splits metadata)
+              (setf (gethash :splits metadata) value)))
+          (setf (gethash key metadata) value)))
+      (setf (slot-value bdef 'metadata) (etypecase value
+                                          (list (plist-hash-table value))
+                                          (hash-table value)))))
 
-(defun (setf bdef-metadata) (value bdef key)
-  ;; if VALUE is a splits object and its `splits-bdef' is nil, set it to point to this bdef.
-  (let ((bdef (ensure-bdef bdef)))
-    (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
-      (funcall (caddr dyn-meta) bdef value)
-      (progn
-        (when (and (typep value 'splits)
-                   (null (funcall 'splits-bdef value)))
-          (setf (splits-bdef value) bdef))
-        (setf (gethash key (slot-value bdef 'metadata)) value)))))
-
-(defun bdef-metadata-keys (bdef)
-  "Get a list of all keys in BDEF's metadata."
-  (hash-table-keys (slot-value (ensure-bdef bdef) 'metadata)))
+(uiop:with-deprecation (:style-warning)
+  (defun bdef-metadata-keys (bdef)
+    "Deprecated alias for (keys (bdef-metadata bdef))."
+    (keys (bdef-metadata bdef))))
 
 (defun bdef-splits (bdef)
   "Get any `splits' from BDEF's metadata, searching in preferred order (i.e. :splits key first, etc)."
@@ -327,22 +382,6 @@ Note that this function will block if the specified metadata is one of the `*bde
           :if (eq value bdef)
             :collect key)))
 
-(defun bdef-free (bdef &optional (dictionary *bdef-dictionary*))
-  "Free a buffer from the bdef dictionary, removing all keys that point to it."
-  (etypecase bdef
-    (symbol (bdef-free (bdef bdef)))
-    (string (bdef-free (bdef bdef)))
-    (bdef
-     (bdef-backend-free (bdef-buffer bdef))
-     (let ((keys (bdef-keys bdef dictionary)))
-       (dolist (key keys)
-         (remhash key dictionary))))))
-
-(defun bdef-set (key value &optional (dictionary *bdef-dictionary*))
-  "Set the KEY in the bdef dictionary DICTIONARY to VALUE."
-  (setf (gethash key dictionary) (bdef-key-cleanse value))
-  (bdef-get key dictionary))
-
 (defgeneric bdef-load (object &key)
   (:documentation "Load a file or other object into a bdef. Different backends will support different object types, and different key arguments. Here are the key arguments supported by one or more backends:
 
@@ -353,18 +392,18 @@ Note that this function will block if the specified metadata is one of the `*bde
 
 (defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) id metadata)
   (declare (ignorable id wavetable))
-  (let ((original-file (bdef-key-cleanse object))
+  (let ((original-file (bdef-ensure-key object))
         (backend (or backend
                      (car *bdef-backends*)
                      (error "No bdef backends are currently enabled. Enable one by loading its subsystem."))))
     (multiple-value-bind (file file-metadata)
         (ensure-readable-audio-file original-file :num-channels num-channels :extensions (bdef-backend-supported-file-types backend))
-      (let* ((buffer (apply 'bdef-backend-load (or backend (car *bdef-backends*)) file (remove-from-plist args :backend :num-channels)))
+      (let* ((buffer (apply #'bdef-backend-load backend file args))
              (bdef (make-instance 'bdef
                                   :key file
                                   :buffer buffer)))
-        (setf (bdef-metadata bdef :original-file) original-file)
-        (bdef-set file bdef)
+        (setf (bdef-metadata bdef :original-file) original-file
+              (bdef-ref file) bdef)
         (doplist (key value file-metadata)
           (unless (eql key :channels) ;; the channels key is inserted by the `file-metadata' function for the number of channels the source (pre-conversion) has
             (if (member key (list :bpm :tbpm))
@@ -383,36 +422,46 @@ Note that this function will block if the specified metadata is one of the `*bde
                        (let ((value (funcall f bdef)))
                          (setf (bdef-metadata bdef k) value)
                          value)))))))
-        (doplist (key value metadata)
-          (setf (bdef-metadata bdef key) value))
-        bdef))))
+        (doplist (key value metadata bdef)
+          (setf (bdef-metadata bdef key) value))))))
 
 (defmethod no-applicable-method ((method (eql #'bdef-load)) &rest args)
   (error "None of the enabled bdef backends support loading ~s." (car args)))
+
+(defun bdef-free (bdef &optional (dictionary *bdef-dictionary*))
+  "Free BDEF's buffer and remove all keys in DICTIONARY that point to it."
+  (etypecase bdef
+    (symbol (bdef-free (bdef bdef)))
+    (string (bdef-free (bdef bdef)))
+    (bdef
+     (bdef-backend-free (bdef-buffer bdef))
+     (let ((keys (bdef-keys bdef dictionary)))
+       (dolist (key keys)
+         (remhash key dictionary))))))
 
 ;;; bdef methods:
 ;; (these should be implemented for each bdef backend)
 
 (defgeneric bdef-length (bdef)
-  (:documentation "Get the length of the bdef in frames."))
+  (:documentation "BDEF's length in frames."))
 
 (defmethod bdef-length (bdef)
   (bdef-length (bdef-buffer bdef)))
 
 (defgeneric bdef-sample-rate (bdef)
-  (:documentation "Get the length of the bdef in frames."))
+  (:documentation "BDEF's sample rate in Hz."))
 
 (defmethod bdef-sample-rate (bdef)
   (bdef-sample-rate (bdef-buffer bdef)))
 
 (defgeneric bdef-channels (bdef)
-  (:documentation "Get the number of channels of the bdef."))
+  (:documentation "The number of BDEF's channels."))
 
 (defmethod bdef-channels (bdef)
   (bdef-channels (bdef-buffer bdef)))
 
 (defgeneric bdef-file (bdef)
-  (:documentation "The file that the bdef was loaded from, or nil if it was not loaded from a file."))
+  (:documentation "The file that BDEF was loaded from, or nil if it was not loaded from a file."))
 
 (defmethod bdef-file (bdef)
   (bdef-file (bdef-buffer bdef)))
