@@ -376,10 +376,12 @@ See also: `bdef', `find-bdef', `ensure-bdef'"
 
 (defun bdef-keys (bdef &optional (dictionary *bdef-dictionary*))
   "Get a list of all the keys in DICTIONARY that point to BDEF."
-  (when-let ((bdef (ensure-bdef bdef)))
+  (when-let* ((bdef (ensure-bdef bdef))
+              (real-key (bdef-key bdef)))
     (loop :for key :being :the hash-keys :of dictionary
             :using (hash-value value)
-          :if (eq value bdef)
+          :if (or (eq value bdef)
+                  (equalp value real-key))
             :collect key)))
 
 (defgeneric bdef-load (object &key)
