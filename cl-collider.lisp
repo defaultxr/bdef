@@ -4,12 +4,14 @@
   (list :wav :aif :aiff))
 
 (defmethod bdef-backend-load ((backend (eql :cl-collider)) (file string) &key (wavetable nil) id server)
-  (if wavetable
-      (cl-collider:buffer-read-as-wavetable file) ;; FIX: this function should support the bufnum and server arguments
-      (apply #'cl-collider:buffer-read file (append (when id
-                                                      (list :bufnum id))
-                                                    (when server
-                                                      (list :server server))))))
+  (apply (if wavetable
+             #'cl-collider:buffer-read-as-wavetable
+             #'cl-collider:buffer-read)
+         file
+         (append (when id
+                   (list :bufnum id))
+                 (when server
+                   (list :server server)))))
 
 ;; FIX:
 (defmethod bdef-backend-load ((backend (eql :cl-collider)) (object list) &key)
