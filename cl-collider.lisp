@@ -3,7 +3,7 @@
 (defmethod bdef-backend-supported-file-types ((backend (eql :cl-collider)))
   (list :wav :aif :aiff))
 
-(defmethod bdef-backend-load ((backend (eql :cl-collider)) (file string) &key (wavetable nil) id server)
+(defmethod bdef-backend-load ((backend (eql :cl-collider)) (file string) &key wavetable id server &allow-other-keys)
   (apply (if wavetable
              #'cl-collider:buffer-read-as-wavetable
              #'cl-collider:buffer-read)
@@ -14,7 +14,7 @@
                    (list :server server)))))
 
 ;; FIX:
-(defmethod bdef-backend-load ((backend (eql :cl-collider)) (object list) &key)
+(defmethod bdef-backend-load ((backend (eql :cl-collider)) (object list) &key wavetable &allow-other-keys)
   (error "SuperCollider backend does not yet support loading a list of files.")
   (let* ((buffer (cl-collider:buffer-alloc (length object)))
          (bdef (make-instance 'bdef
@@ -24,16 +24,15 @@
     (setf (bdef-metadata bdef :wavetable) (and wavetable t))
     bdef))
 
-(defmethod bdef-backend-load ((backend (eql :cl-collider)) (object cl-collider::env) &key (wavetable t) &allow-other-keys)
-  (let* ((wavetable (or wavetable 512)) ;; FIX: if WAVETABLE is t...
-         (buffer (cl-collider:buffer-alloc (* 2 wavetable)))
-         (bdef (make-instance 'bdef
-                              :key object
-                              :buffer buffer)))
-    (cl-collider:buffer-setn buffer (cl-collider::list-in-wavetable-format (cl-collider::env-as-signal object wavetable)))
-    (setf (bdef-metadata bdef :env) object
-          (bdef-metadata bdef :wavetable) (and wavetable t))
-    bdef))
+(defmethod bdef-backend-load ((backend (eql :cl-collider)) (env cl-collider::env) &key (wavetable t) &allow-other-keys)
+  (let* ((size (if (integerp wavetable) wavetable 512))
+         (buffer (cl-collider:buffer-alloc (* (if wavetable 2 1) size))))
+    (cl-collider:buffer-setn
+     buffer
+     (coerce (funcall (if wavetable #'cl-collider::vector-in-wavetable-format #'identity)
+                      (cl-collider::env-as-signal env size))
+             'list))
+    (values buffer (list :env env :wavetable t))))
 
 (defmethod bdef-buffer ((buffer cl-collider::buffer))
   buffer)
