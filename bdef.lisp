@@ -21,33 +21,37 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 
 ;;; file handling
 
-(defun ensure-readable-audio-file (path &key (num-channels 2) (extensions (list :wav :aif :aiff)))
-  "If PATH ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored under `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
+(defun ensure-readable-audio-file (file &key num-channels (extensions (list :wav :aif :aiff)))
+  "If FILE ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored under `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
 
 See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
-  (let* ((path (uiop:native-namestring path))
-         (ext (pathname-type path))
-         (file-metadata (file-metadata path)))
+  (let* ((file (uiop:native-namestring file))
+         (ext (pathname-type file))
+         (file-metadata (file-metadata file)))
     (values
      (namestring
       (if (and (position ext extensions :test #'string-equal)
                (eql num-channels (getf file-metadata :channels)))
-          path
+          (if (probe-file file)
+              file
+              (error "Could not find file ~s" file))
           (let* ((output-directory (merge-pathnames (concat num-channels "-channel/") *bdef-temporary-directory*))
-                 (output-filename (make-pathname
-                                   :directory (pathname-directory output-directory)
-                                   :name (pathname-name path)
-                                   :type (string-downcase (symbol-name (car extensions))))))
+                 (output-filename (namestring (make-pathname
+                                               :directory (pathname-directory output-directory)
+                                               :name (pathname-name file)
+                                               :type (string-downcase (symbol-name (car extensions)))))))
             (unless (probe-file output-filename)
               (if *ffmpeg-path*
                   (unless (probe-file *ffmpeg-path*)
                     (error "ffmpeg binary not found at ~s; you will need to update ~s to point to ffmpeg." *ffmpeg-path* '*ffmpeg-path*))
                   (error "~s is nil; you will need to set it to point to your ffmpeg binary." '*ffmpeg-path*))
+              (unless (probe-file file)
+                (error "Could not find file ~s" file))
               (ensure-directories-exist output-directory)
               (uiop:run-program (list *ffmpeg-path*
-                                      "-i" (namestring path)
+                                      "-i" file
                                       "-ac" (write-to-string num-channels)
-                                      (namestring output-filename))))
+                                      output-filename)))
             output-filename)))
      file-metadata)))
 
