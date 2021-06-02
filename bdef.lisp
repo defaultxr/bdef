@@ -14,6 +14,11 @@
   #+windows (concat (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/")
   "The path to ffmpeg, or nil if ffmpeg could not be found.")
 
+(defvar *ffprobe-path*
+  #+(or linux darwin) (ignore-errors (uiop:run-program "which ffprobe" :output (list :string :stripped t)))
+  #+windows (concat (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/")
+  "The path to ffprobe, or nil if ffprobe could not be found.")
+
 (defvar *bdef-backends* (list)
   "The list of enabled backends. When the user attempts to create a bdef, each backend in this list is used to try to create the bdef from the file or object. If a backend returns nil, the next backend in the list will be tried. This is repeated until the first backend successfully returns a bdef object.
 
@@ -55,32 +60,19 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
             output-filename)))
      file-metadata)))
 
-;; FIX: just parse the json from the following command instead:
-;; ffprobe -v quiet -print_format json -show_format -show_streams FILE
-;; https://wiki.multimedia.cx/index.php/FFmpeg_Metadata
 (defun file-metadata (file)
   "Get the metadata of FILE as a plist."
-  (multiple-value-bind (stdout stderr)
-      (uiop:run-program (list *ffmpeg-path* "-i" (uiop:native-namestring file) "-f" "ffmetadata" "-")
-                        :output (list :string :stripped t)
-                        :error-output (list :string :stripped t)
-                        :ignore-error-status t)
-    (let* ((split (cdr (split-string stdout :char-bag (list #\newline))))
-           (kv (flatten (mapcar (lambda (line)
-                                  (split-string line :char-bag #\= :max-num 2))
-                                split)))
-           (plist (loop :for (key value) :on kv :by #'cddr
-                        :append (list (make-keyword (string-upcase key))
-                                      value)))
-           (channels (block channels ;; FIX: we don't detect if there are more than two or less than one (??) channels
-                       (dotimes (n 2)
-                         (when (search (nth n (list "mono," "stereo,")) stderr)
-                           (return-from channels (1+ n))))
-                       nil)))
-      (append (when channels
-                (list :channels
-                      channels))
-              plist))))
+  (let* ((json (jsown:parse
+                (uiop:run-program (list *ffprobe-path* "-v" "quiet" "-print_format" "json" "-show_format" "-show_streams" (uiop:native-namestring file))
+                                  :output (list :string :stripped t)
+                                  :ignore-error-status t)))
+         (streams (jsown:filter json "streams"))
+         (audio-stream (find-if (fn (string-equal "audio" (jsown:filter _ "codec_type"))) streams))
+         (res (list :channels (jsown:filter audio-stream "channels"))))
+    (jsown:do-json-keys (k v) (jsown:filter json "format" "tags")
+      (push v res)
+      (push (friendly-symbol k) res))
+    res))
 
 ;;; backend generics
 
