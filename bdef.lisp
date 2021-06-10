@@ -68,10 +68,12 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
                                   :ignore-error-status t)))
          (streams (jsown:filter json "streams"))
          (audio-stream (find-if (fn (string-equal "audio" (jsown:filter _ "codec_type"))) streams))
-         (res (list :channels (jsown:filter audio-stream "channels"))))
-    (jsown:do-json-keys (k v) (jsown:filter json "format" "tags")
-      (push v res)
-      (push (friendly-symbol k) res))
+         (res (list :channels (jsown:filter audio-stream "channels")))
+         (format (jsown:val json "format")))
+    (when (jsown:keyp format "tags")
+      (jsown:do-json-keys (k v) (jsown:val format "tags")
+        (push v res)
+        (push (friendly-symbol k) res)))
     res))
 
 ;;; backend generics
