@@ -26,6 +26,12 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 
 ;;; file handling
 
+(define-condition file-does-not-exist (simple-condition file-error)
+  ()
+  (:report
+   (lambda (condition stream)
+     (format stream "~@<File ~S does not exist.~@:>" (file-error-pathname condition)))))
+
 (defun ensure-readable-audio-file (file &key num-channels (extensions (list :wav :aif :aiff)))
   "If FILE ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored under `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
 
@@ -39,7 +45,7 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
                (eql num-channels (getf file-metadata :channels)))
           (if (probe-file file)
               file
-              (error "Could not find file ~s" file))
+              (error 'file-does-not-exist :pathname file))
           (let* ((output-directory (merge-pathnames (concat num-channels "-channel/") *bdef-temporary-directory*))
                  (output-filename (namestring (make-pathname
                                                :directory (pathname-directory output-directory)
@@ -51,7 +57,7 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
                     (error "ffmpeg binary not found at ~s; you will need to update ~s to point to ffmpeg." *ffmpeg-path* '*ffmpeg-path*))
                   (error "~s is nil; you will need to set it to point to your ffmpeg binary." '*ffmpeg-path*))
               (unless (probe-file file)
-                (error "Could not find file ~s" file))
+                (error 'file-does-not-exist :pathname file))
               (ensure-directories-exist output-directory)
               (uiop:run-program (list *ffmpeg-path*
                                       "-i" file
@@ -396,6 +402,8 @@ See also: `bdef', `find-bdef', `ensure-bdef'"
         (backend (or backend
                      (car *bdef-backends*)
                      (error "No bdef backends are currently enabled. Enable one by loading its subsystem."))))
+    (unless (probe-file original-file)
+      (error 'file-does-not-exist :pathname original-file))
     (multiple-value-bind (file file-metadata)
         (ensure-readable-audio-file original-file :num-channels num-channels :extensions (bdef-backend-supported-file-types backend))
       (let* ((buffer (apply #'bdef-backend-load backend file args))
