@@ -72,7 +72,7 @@
   (cl-collider:bufnum (bdef-buffer bdef)))
 
 (defmethod cl-collider::floatfy ((bdef bdef))
-  (cl-collider:bufnum (bdef-buffer bdef)))
+  (coerce (cl-collider:bufnum (bdef-buffer bdef)) 'single-float))
 
 (defmethod cl-collider:frames ((bdef bdef))
   (frames (bdef-buffer bdef)))
