@@ -1,6 +1,6 @@
 ;;;; package.lisp
 
-(defpackage #:bdef
+(uiop:define-package #:bdef
   (:use #:cl
         #:alexandria
         #:mutility)
@@ -13,13 +13,14 @@
 
    #:bdef
    #:bdef-p
-   #:bdef-key
-   #:bdef-buffer
    #:all-bdefs
-
+   #:find-bdef
    #:bdef-free
 
+   #:bdef-key
    #:bdef-id
+   #:bdef-buffer
+
    #:bdef-length
    #:bdef-sample-rate
    #:bdef-channels
