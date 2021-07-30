@@ -2,29 +2,11 @@
 
 (affixnew *dictionary-lookup-functions* 'bdef:bdef)
 
-;;; generics
+;;; methods
 
-(defmethod backend-convert-object ((bdef bdef:bdef) key (backend (eql :supercollider)))
-  (declare (ignore key))
+(defmethod backend-convert-object ((bdef bdef:bdef) key backend)
+  (declare (ignore key backend))
   (bdef:bdef-id (bdef:bdef-buffer bdef)))
-
-(defmethod backend-convert-object ((bdef bdef:bdef) key (backend (eql :incudine)))
-  (declare (ignore key))
-  (bdef:bdef-buffer bdef))
-
-(defmethod backend-convert-object ((object symbol) key (backend (eql :supercollider)))
-  (declare (ignore key))
-  (let ((bdef (bdef::bdef-ref object)))
-    (if bdef
-        (bdef:bdef-id (bdef:bdef-buffer bdef))
-        object)))
-
-(defmethod backend-convert-object ((object symbol) key (backend (eql :incudine)))
-  (declare (ignore key))
-  (let ((bdef (bdef::bdef-ref object)))
-    (if bdef
-        (bdef:bdef-buffer bdef)
-        object)))
 
 (defmethod play ((bdef bdef:bdef))
   (play (bdef:bdef-buffer bdef)))
