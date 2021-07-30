@@ -38,7 +38,8 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
   (let* ((file (uiop:native-namestring file))
          (ext (pathname-type file))
-         (file-metadata (file-metadata file)))
+         (file-metadata (file-metadata file))
+         (num-channels (or num-channels (getf file-metadata :channels))))
     (values
      (namestring
       (if (and (position ext extensions :test #'string-equal)
