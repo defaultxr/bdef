@@ -59,10 +59,16 @@
   :description "FiveAM-based tests suite for bdef"
   :license "MIT"
   :depends-on (#:bdef
+               #:bdef/cl-patterns
                #:mutility
                #:mutility/test-helpers
                #:fiveam)
-  :components ((:file "tests"))
+  :pathname "t/"
+  :serial t
+  :components ((:file "test")
+               (:file "bdef")
+               (:file "splits")
+               (:file "cl-patterns"))
   :perform (test-op (op c)
                     (uiop:symbol-call :fiveam :run!
                                       (uiop:find-symbol* '#:bdef-tests
