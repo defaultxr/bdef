@@ -10,12 +10,12 @@
   :bug-tracker "https://github.com/defaultxr/bdef/issues"
   :mailto "defaultxr at gmail dot com"
   :source-control (:git "git@github.com:defaultxr/bdef.git")
-  :serial t
   :depends-on (#:alexandria
                #:mutility
                #:parse-float
                #:jsown
                #:eager-future2)
+  :serial t
   :components ((:file "package")
                (:file "bdef")
                (:file "splits")
@@ -28,9 +28,9 @@
   :author "modula t."
   :license "MIT"
   :version "0.8"
-  :serial t
   :depends-on (#:bdef
                #:cl-patterns)
+  :serial t
   :components ((:file "cl-patterns")))
 
 (asdf:defsystem #:bdef/cl-collider
@@ -38,9 +38,9 @@
   :author "modula t."
   :license "MIT"
   :version "0.8"
-  :serial t
   :depends-on (#:bdef
                #:cl-collider)
+  :serial t
   :components ((:file "cl-collider")))
 
 (asdf:defsystem #:bdef/incudine
@@ -48,9 +48,9 @@
   :author "modula t."
   :license "MIT"
   :version "0.8"
-  :serial t
   :depends-on (#:bdef
                #:incudine)
+  :serial t
   :components ((:file "incudine")))
 
 (asdf:defsystem #:bdef/tests

@@ -56,7 +56,7 @@
 (defpattern psplits ()
   ((splits :default nil)
    (split :default nil))
-  :documentation "Yields events for split information based on the :bufnum of the current `*event*'.")
+  :documentation "Yields events for split information based on the buffer of the current `*event*'.")
 
 ;; FIX: define behaviors for when the selected split is out of range (error, clip, wrap, fold, etc)
 (defmethod as-pstream ((psplits psplits))

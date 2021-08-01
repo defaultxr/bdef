@@ -186,7 +186,7 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
   (:documentation "The actual buffer object that the bdef refers to."))
 
 (defgeneric bdef-metadata (bdef &optional key)
-  (:documentation "Get the value of BDEF's metadata for KEY. Returns true as a second value if the metadata had an entry for KEY, or false if it did not.
+  (:documentation "Get the value of BDEF's metadata for KEY, or the full metadata hashtable if KEY is not provided. Returns true as a second value if the metadata had an entry for KEY, or false if it did not.
 
 Note that this function will block if the specified metadata is one of the `*bdef-auto-metadata*' that hasn't finished being generated yet."))
 
