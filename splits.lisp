@@ -29,7 +29,7 @@
    (comments :initarg :comments :initform nil :type (or null (vector (or null string))) :documentation "The vector of comments for each split point.")
    (unit :initarg :unit :initform :percents :accessor splits-unit :type symbol :documentation "The unit type of each split point, i.e. percents, samples, or seconds.")
    (bdef :initarg :bdef :initform nil :accessor splits-bdef :type (or null bdef) :documentation "The bdef object that this splits references (i.e. for information like duration, sample rate, etc, for converting point data).")
-   (metadata :initarg :metadata :initform nil :accessor splits-metadata :documentation "Any additional metadata for the splits object."))
+   (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the splits, accessible with the `splits-metadata' function."))
   (:documentation "List of split data for dividing buffers into pieces."))
 
 (defmethod print-object ((this splits) stream)
@@ -72,7 +72,9 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
                    :comments (when comments (coerce comments 'vector))
                    :unit (%splits-ensure-unit unit)
                    :bdef bdef
-                   :metadata metadata)))
+                   :metadata (etypecase metadata
+                               (list (plist-hash-table metadata))
+                               (hash-table metadata)))))
 
 (defun %splits-ensure-point-type (point)
   "Ensure POINT is one of the splits point types."
@@ -167,6 +169,29 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
        ((:percent :percents) 1.0)
        ((:sample :frame :samples :frames) (bdef-length object))
        ((:second :seconds) (bdef-duration object))))))
+
+(defgeneric splits-metadata (splits &optional key)
+  (:documentation "Get the value of SPLITS's metadata for KEY, or the full metadata hashtable if KEY is not provided. Returns true as a second value if the metadata had an entry for KEY, or false if it did not."))
+
+(defmethod splits-metadata ((splits splits) &optional key)
+  (with-slots (metadata) splits
+    (if key
+        (gethash key metadata)
+        metadata)))
+
+(defmethod (setf splits-metadata) (value (splits splits) &optional key)
+  (with-slots (metadata) splits
+    (if key
+        (progn
+          (when (typep value 'bdef)
+            (unless (bdef-splits value)
+              (setf (bdef-splits value) splits))
+            (unless (splits-bdef splits)
+              (setf (splits-bdef splits) value)))
+          (setf (gethash key metadata) value))
+        (setf metadata (etypecase value
+                         (list (plist-hash-table value))
+                         (hash-table value))))))
 
 (defgeneric splits-export (splits file format)
   (:documentation "Write a `splits' object to a file in another format."))
