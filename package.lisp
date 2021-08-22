@@ -14,11 +14,14 @@
    #:bdef
    #:bdef-p
    #:all-bdefs
+   #:all-bdef-names
    #:find-bdef
    #:bdef-free
 
+   #:bdef-name
    #:bdef-key
    #:bdef-id
+   #:bdef-names
    #:bdef-buffer
 
    #:bdef-length
