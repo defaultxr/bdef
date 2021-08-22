@@ -35,6 +35,12 @@
 (defmethod print-object ((this splits) stream)
   (format stream "#<~a~@[ :BDEF ~a~]>" 'splits (splits-bdef this)))
 
+(defun splits-p (object)
+  "True if OBJECT is a splits.
+
+See also: `splits', `make-splits'"
+  (typep object 'splits))
+
 (defun make-splits (starts &key ends loops comments (unit :percents) bdef metadata)
   "Make a `splits' object. Ends, loops, and comments for each split can be specified with the keyword arguments or as sublists in STARTS.
 

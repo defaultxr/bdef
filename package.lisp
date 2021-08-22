@@ -50,6 +50,7 @@
    ;;; splits.lisp
 
    #:splits
+   #:splits-p
    #:make-splits
    #:splits-length
    #:splits-points
