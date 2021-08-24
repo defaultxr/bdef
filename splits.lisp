@@ -32,8 +32,8 @@
    (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the splits, accessible with the `splits-metadata' function."))
   (:documentation "List of split data for dividing buffers into pieces."))
 
-(defmethod print-object ((this splits) stream)
-  (format stream "#<~a~@[ :BDEF ~a~]>" 'splits (splits-bdef this)))
+(defmethod print-object ((splits splits) stream)
+  (format stream "#<~a~@[ :BDEF ~a~]>" 'splits (splits-bdef splits)))
 
 (defun splits-p (object)
   "True if OBJECT is a splits.
@@ -55,10 +55,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
   (let* ((listp (listp (elt starts 0)))
          (comments (or comments (and listp
                                      (mapcar (lambda (item)
-                                               (car (remove-if-not
-                                                     (lambda (x) (or (stringp x)
-                                                                     (symbolp x)))
-                                                     item)))
+                                               (find-if (fn (typep _ 'string-designator)) item))
                                              starts))))
          (list (when listp
                  (mapcar (lambda (x) (remove-if #'stringp x)) starts)))
