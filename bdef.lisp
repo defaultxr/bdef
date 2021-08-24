@@ -184,10 +184,11 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
 
 Note that this function will block if the specified metadata is one of the `*bdef-auto-metadata*' that hasn't finished being generated yet."))
 
-(defclass bdef ()
-  ((name :initarg :name :reader bdef-name :type string-designator :documentation "The name (key) of the bdef.")
-   (buffer :initarg :buffer :reader bdef-buffer :documentation "The actual buffer object that the bdef refers to.")
-   (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the bdef, accessible with the `bdef-metadata' function.")))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defclass bdef ()
+    ((name :initarg :name :reader bdef-name :type string-designator :documentation "The name (key) of the bdef.")
+     (buffer :initarg :buffer :reader bdef-buffer :documentation "The actual buffer object that the bdef refers to.")
+     (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the bdef, accessible with the `bdef-metadata' function."))))
 
 (define-dictionary bdef :name-type string-designator)
 
