@@ -239,29 +239,29 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
                                            (funcall value bdef)
                                            value))))))
 
-(uiop:with-deprecation (:style-warning)
+(uiop:with-deprecation (:warning)
   (defun bdef-ref (name &optional (dictionary *bdef-dictionary*))
     "Deprecated alias for `find-bdef'."
     (find-bdef name :dictionary dictionary))
 
   (defun (setf bdef-ref) (value name &optional (dictionary *bdef-dictionary*))
     "Deprecated alias for `(setf find-bdef)'."
-    (setf (find-bdef name :dictionary dictionary) value)))
+    (setf (find-bdef name :dictionary dictionary) value))
 
-(uiop:with-deprecation (:warning)
   (defun bdef-get (key &optional (dictionary *bdef-dictionary*))
     "Deprecated alias for `find-bdef'."
     (find-bdef key :dictionary dictionary))
 
   (defun bdef-set (key value &optional (dictionary *bdef-dictionary*))
     "Deprecated alias for `(setf find-bdef)'."
-    (setf (find-bdef key :dictionary dictionary) value)))
+    (setf (find-bdef key :dictionary dictionary) value))
 
-(uiop:with-deprecation (:style-warning)
   (defun bdef-key (object)
+    "Deprecated alias for `bdef-name'."
     (bdef-name object))
 
   (defun (setf bdef-key) (value object)
+    "Deprecated alias for `(setf bdef-name)'."
     (setf (bdef-name object) value)))
 
 (defmethod bdef-metadata ((symbol symbol) &optional key)
@@ -311,7 +311,7 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
                                           (list (plist-hash-table value))
                                           (hash-table value)))))
 
-(uiop:with-deprecation (:style-warning)
+(uiop:with-deprecation (:warning)
   (defun bdef-metadata-keys (bdef)
     "Deprecated alias for (keys (bdef-metadata bdef))."
     (keys (bdef-metadata bdef))))
@@ -422,7 +422,7 @@ See also: `bdef-frame'"))
 (defmethod bdef-frames ((bdef bdef) &key (start 0) (end (bdef-length bdef)) channels)
   (bdef-frames (bdef-buffer bdef) :start start :end end :channels channels))
 
-(uiop:with-deprecation (:style-warning)
+(uiop:with-deprecation (:warning)
   (defun bdef-subseq (bdef &optional (start 0) (end (bdef-length bdef)) channel)
     "Deprecated alias for `bdef-frames'."
     (bdef-frames bdef :start start :end end :channels channel)))
@@ -467,7 +467,7 @@ See also: `bdef-frames'"))
                       :initial-contents (loop :for i :from 0 :repeat len
                                               :collect (row-major-aref res i)))))))
 
-(uiop:with-deprecation (:style-warning)
+(uiop:with-deprecation (:warning)
   (defun bdef-elt (bdef index &optional channel)
     "Deprecated alias for `bdef-frame'."
     (bdef-frame bdef index channel)))
