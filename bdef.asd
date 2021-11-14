@@ -15,6 +15,7 @@
                #:parse-float
                #:jsown
                #:eager-future2)
+  :pathname "src/"
   :serial t
   :components ((:file "package")
                (:file "bdef")
@@ -30,6 +31,7 @@
   :version "0.8"
   :depends-on (#:bdef
                #:cl-patterns)
+  :pathname "src/"
   :serial t
   :components ((:file "cl-patterns")))
 
@@ -40,6 +42,7 @@
   :version "0.8"
   :depends-on (#:bdef
                #:cl-collider)
+  :pathname "src/"
   :serial t
   :components ((:file "cl-collider")))
 
@@ -50,6 +53,7 @@
   :version "0.8"
   :depends-on (#:bdef
                #:incudine)
+  :pathname "src/"
   :serial t
   :components ((:file "incudine")))
 
