@@ -264,11 +264,24 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
     "Deprecated alias for `(setf bdef-name)'."
     (setf (bdef-name object) value)))
 
-(defmethod bdef-metadata ((symbol symbol) &optional key)
-  (bdef-metadata (find-bdef symbol) key))
 
-(defmethod bdef-metadata ((string string) &optional key)
-  (bdef-metadata (find-bdef string) key))
+(defmethod bdef-id ((name symbol))
+  (bdef-id (bdef-buffer (find-bdef name))))
+
+(defmethod bdef-id ((name string))
+  (bdef-id (bdef-buffer (find-bdef name))))
+
+(defmethod bdef-id ((null null))
+  nil)
+
+(defmethod bdef-id ((bdef bdef))
+  (bdef-id (bdef-buffer bdef)))
+
+(defmethod bdef-metadata ((name symbol) &optional key)
+  (bdef-metadata (find-bdef name) key))
+
+(defmethod bdef-metadata ((name string) &optional key)
+  (bdef-metadata (find-bdef name) key))
 
 (defmethod bdef-metadata ((null null) &optional key)
   nil)
@@ -436,8 +449,7 @@ See also: `bdef-frame'"))
   (:documentation "Get the duration of the bdef in seconds."))
 
 (defmethod bdef-duration ((bdef t))
-  (let ((buffer (bdef-buffer bdef)))
-    (/ (bdef-length buffer) (bdef-sample-rate buffer))))
+  (/ (bdef-length bdef) (bdef-sample-rate bdef)))
 
 (defgeneric bdef-tempo (bdef)
   (:documentation "Get the tempo of the bdef in beats per second. Defaults to 1 if no tempo metadatum exists."))
