@@ -240,7 +240,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 NOTE: If \"bpm\" is not in the string, then this function will look for a number in the range 50-400, starting from the end of the string."
   (when string
     ;; (warn "extract-bpm-from-string is not done yet!")
-    (let* ((split (split-string string :char-bag (list #\space #\_ #\-)))
+    (let* ((split (string-split string :char-bag (list #\space #\_ #\-)))
            (bpm-pos (position-if (lambda (s)
                                    (search "bpm" (string-downcase s)))
                                  split
@@ -268,7 +268,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
   (check-type buf-size (integer 0))
   (check-type hop-size (integer 0))
   (mapcar #'parse-float:parse-float
-          (split-string
+          (string-split
            (uiop:run-program (list (ecase utility
                                      (:onset "aubioonset")
                                      (:track "aubiotrack"))
@@ -336,7 +336,7 @@ See also: `splits', `aubio-onsets'"
   (with-open-file (stream file :direction :input :if-does-not-exist :error)
     (loop :for line := (read-line stream nil)
           :while line
-          :for parsed := (split-string line :char-bag (list #\tab))
+          :for parsed := (string-split line :char-bag (list #\tab))
           :collect (parse-float:parse-float (car parsed)) :into starts
           :collect (parse-float:parse-float (cadr parsed)) :into ends
           :collect (caddr parsed) :into comments
