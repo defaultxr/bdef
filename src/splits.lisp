@@ -81,7 +81,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 
 (defun %splits-ensure-point-type (point)
   "Ensure POINT is one of the splits point types."
-  (ecase point
+  (ecase (make-keyword point)
     ((:starts :start) 'starts)
     ((:ends :end) 'ends)
     ((:loops :loop) 'loops)
@@ -168,7 +168,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
   "Get the end point of OBJECT."
   (etypecase object
     ((or bdef splits)
-     (ecase unit
+     (ecase (make-keyword unit)
        ((:percent :percents) 1.0)
        ((:sample :frame :samples :frames) (bdef-length object))
        ((:second :seconds) (bdef-duration object))))))
