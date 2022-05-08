@@ -54,8 +54,8 @@
 (in-package #:cl-patterns)
 
 (defpattern psplits ()
-  ((splits :default nil)
-   (split :default nil))
+  ((splits :initform nil)
+   (split :initform nil))
   :documentation "Yields events for split information based on the buffer of the current `*event*'.")
 
 ;; FIX: define behaviors for when the selected split is out of range (error, clip, wrap, fold, etc)
