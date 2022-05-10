@@ -1,5 +1,7 @@
 ;;;; bdef.lisp
 ;; FIX: allow a sound to be loaded as a wavetable and a normal sound at the same time
+;; FIX: also ensure a sound can be loaded multiple times with different number of channels
+;; FIX: make all methods like `splits-bdef', `bdef-buffer', `bdef-sample-rate', etc take an errorp argument to determine whether to error if the data is not available
 
 (in-package #:bdef)
 
@@ -225,7 +227,7 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
                               (bdef name name)
                               (find-bdef name :dictionary dictionary)))))
     (setf (find-bdef name) (etypecase value
-                             (symbol value)
+                             (symbol (uiop:native-namestring value))
                              (bdef value)
                              (string
                               (let* ((path (uiop:native-namestring value))

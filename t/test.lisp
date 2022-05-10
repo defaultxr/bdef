@@ -7,7 +7,7 @@
 (in-package #:bdef/tests)
 
 (def-suite bdef-tests
-    :description "bdef tests suite.")
+  :description "bdef tests suite.")
 
 (in-suite bdef-tests)
 

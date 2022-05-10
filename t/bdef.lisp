@@ -5,7 +5,6 @@
 (test bdef
   "Test basic bdef functionality"
   ;; (progn
-  ;;   (fresh-line)
   ;;   (bdef :foo)
   ;;   (bdef :foo "/path")
   ;;   (bdef :foo "/path" :arg1 4 :arg2 99)

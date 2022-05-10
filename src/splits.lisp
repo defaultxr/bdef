@@ -28,7 +28,7 @@
    (loops :initarg :loops :initform nil :type (or null (vector number)) :documentation "The vector of split loop points, or NIL if no loop points are defined.")
    (comments :initarg :comments :initform nil :type (or null (vector (or null string))) :documentation "The vector of comments for each split point.")
    (unit :initarg :unit :initform :percents :accessor splits-unit :type symbol :documentation "The unit type of each split point, i.e. percents, samples, or seconds.")
-   (bdef :initarg :bdef :initform nil :accessor splits-bdef :type (or null bdef) :documentation "The bdef object that this splits references (i.e. for information like duration, sample rate, etc, for converting point data).")
+   (bdef :initarg :bdef :accessor splits-bdef :type bdef :documentation "The bdef object that this splits references (i.e. for information like duration, sample rate, etc, for converting point data).")
    (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the splits, accessible with the `splits-metadata' function."))
   (:documentation "List of split data for dividing buffers into pieces."))
 
@@ -98,9 +98,9 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
   "Get the name of the conversion function to convert SPLITS' unit type into the unit specified."
   (let ((unit (%splits-ensure-unit unit))
         (unit-slot (slot-value splits 'unit)))
-    (if (string= (symbol-name unit) (symbol-name unit-slot))
+    (if (string= unit unit-slot)
         'identity
-        (intern (concat (symbol-name unit-slot) "-" (symbol-name unit)) 'bdef))))
+        (intern (concat unit-slot "-" unit) 'bdef))))
 
 (defun %splits-conversion-function (splits unit)
   "Get a function that can be used to convert SPLITS' unit into the unit type specified."
@@ -189,7 +189,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
           (when (typep value 'bdef)
             (unless (bdef-splits value)
               (setf (bdef-splits value) splits))
-            (unless (splits-bdef splits)
+            (unless (slot-boundp splits 'bdef)
               (setf (splits-bdef splits) value)))
           (setf (gethash key metadata) value))
         (setf metadata (etypecase value
@@ -207,7 +207,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
     (splits-export object stream format)))
 
 (defmethod splits-export (object (file pathname) format)
-  (splits-export object (namestring (truename file)) format))
+  (splits-export object (uiop:native-namestring file) format))
 
 (defmethod bdef-buffer ((this splits))
   (bdef-buffer (splits-bdef this)))
@@ -304,7 +304,7 @@ See also: `splits', `aubio-onsets'"
   "Use aubio's demo_bpm_extract.py to get the bpm of FILE."
   (assert (member mode '(:default :fast :super-fast)) (mode))
   (let* ((file (ensure-readable-audio-file (bdef-file file)))
-         (string (uiop:run-program (list "python" (namestring (truename (merge-pathnames *aubio-python-directory* "demo_bpm_extract.py"))) "-m" (string-downcase (string mode)) (namestring (truename file)))
+         (string (uiop:run-program (list "python" (uiop:native-namestring (merge-pathnames *aubio-python-directory* "demo_bpm_extract.py")) "-m" (string-downcase mode) (uiop:native-namestring file))
                                    :output '(:string :stripped t))))
     (car (multiple-value-list (read-from-string (subseq string 0 (position #\space string)))))))
 
@@ -319,7 +319,7 @@ See also: `splits', `aubio-onsets'"
                      (split (subseq string (1+ start)) (append list (list (subseq string 0 start))))
                      (append list (list string))))))
       (mapcar #'read-from-string ;; use "aubiocut -b FILE" to get a file cut by beats
-              (split (uiop:run-program (list "python" (namestring (merge-pathnames *aubio-python-directory* "demo-tempo.py")) (namestring (truename file)))
+              (split (uiop:run-program (list "python" (namestring (merge-pathnames *aubio-python-directory* "demo-tempo.py")) (uiop:native-namestring file))
                                        :output '(:string :stripped t)))))))
 
 ;;; bpm-tools
