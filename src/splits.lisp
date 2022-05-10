@@ -33,7 +33,10 @@
   (:documentation "List of split data for dividing buffers into pieces."))
 
 (defmethod print-object ((splits splits) stream)
-  (format stream "#<~a~@[ :BDEF ~a~]>" 'splits (splits-bdef splits)))
+  (format stream "#<~a :LENGTH ~a :UNIT ~s~@[ :BDEF ~a~]>" 'splits
+          (length (slot-value splits 'starts))
+          (slot-value splits 'unit)
+          (ignore-errors (splits-bdef splits))))
 
 (defun splits-p (object)
   "True if OBJECT is a splits.
