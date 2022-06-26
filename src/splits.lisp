@@ -210,7 +210,7 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
     (splits-export object stream format)))
 
 (defmethod splits-export (object (file pathname) format)
-  (splits-export object (uiop:native-namestring file) format))
+  (splits-export object (ensure-namestring file) format))
 
 (defmethod bdef-buffer ((this splits))
   (bdef-buffer (splits-bdef this)))
@@ -276,9 +276,9 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
                                      (:onset "aubioonset")
                                      (:track "aubiotrack"))
                                    "--input" (ensure-readable-audio-file
-                                              (uiop:native-namestring (if (bdef-p file)
-                                                                          (bdef-file file)
-                                                                          file)))
+                                              (ensure-namestring (if (bdef-p file)
+                                                                     (bdef-file file)
+                                                                     file)))
                                    "--bufsize" (write-to-string buf-size)
                                    "--hopsize" (write-to-string hop-size)
                                    "--onset" (string-downcase algorithm)
@@ -307,7 +307,7 @@ See also: `splits', `aubio-onsets'"
   "Use aubio's demo_bpm_extract.py to get the bpm of FILE."
   (assert (member mode '(:default :fast :super-fast)) (mode))
   (let* ((file (ensure-readable-audio-file (bdef-file file)))
-         (string (uiop:run-program (list "python" (uiop:native-namestring (merge-pathnames *aubio-python-directory* "demo_bpm_extract.py")) "-m" (string-downcase mode) (uiop:native-namestring file))
+         (string (uiop:run-program (list "python" (ensure-namestring (merge-pathnames *aubio-python-directory* "demo_bpm_extract.py")) "-m" (string-downcase mode) (ensure-namestring file))
                                    :output '(:string :stripped t))))
     (car (multiple-value-list (read-from-string (subseq string 0 (position #\space string)))))))
 
@@ -322,7 +322,7 @@ See also: `splits', `aubio-onsets'"
                      (split (subseq string (1+ start)) (append list (list (subseq string 0 start))))
                      (append list (list string))))))
       (mapcar #'read-from-string ;; use "aubiocut -b FILE" to get a file cut by beats
-              (split (uiop:run-program (list "python" (namestring (merge-pathnames *aubio-python-directory* "demo-tempo.py")) (uiop:native-namestring file))
+              (split (uiop:run-program (list "python" (namestring (merge-pathnames *aubio-python-directory* "demo-tempo.py")) (ensure-namestring file))
                                        :output '(:string :stripped t)))))))
 
 ;;; bpm-tools

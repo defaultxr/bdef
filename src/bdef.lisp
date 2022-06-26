@@ -34,45 +34,53 @@ Note that backends are made available by loading the relevant bdef subsystem wit
    (lambda (condition stream)
      (format stream "~@<File ~S does not exist.~@:>" (file-error-pathname condition)))))
 
+(defun ensure-namestring (filename)
+  "Get the full path to FILENAME."
+  (uiop:native-namestring (uiop:ensure-pathname filename :want-non-wild t)))
+
+(defun file-exists-p (filename)
+  "True if FILENAME names a file that exists. This function is needed to ensure characters like ? are not interpreted as Common Lisp pathname wildcards."
+  (probe-file (uiop:ensure-pathname filename :want-non-wild t)))
+
 (defun ensure-readable-audio-file (file &key num-channels (extensions (list :wav :aif :aiff)))
   "If FILE ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored under `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
 
 See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
-  (let* ((file (uiop:native-namestring file))
+  (let* ((file (ensure-namestring file))
+         (filename (nth-value 2 (uiop:split-unix-namestring-directory-components file)))
          (ext (pathname-type file))
          (file-metadata (file-metadata file))
-         (num-channels (or num-channels (getf file-metadata :channels))))
+         (num-channels (or num-channels (getf file-metadata :channels)))
+         (extensions (ensure-list extensions)))
     (values
-     (namestring
-      (if (and (position ext extensions :test #'string-equal)
-               (eql num-channels (getf file-metadata :channels)))
-          (if (probe-file file)
-              file
-              (error 'file-does-not-exist :pathname file))
-          (let* ((output-directory (merge-pathnames (concat num-channels "-channel/") *bdef-temporary-directory*))
-                 (output-filename (namestring (make-pathname
-                                               :directory (pathname-directory output-directory)
-                                               :name (pathname-name file)
-                                               :type (string-downcase (symbol-name (car extensions)))))))
-            (unless (probe-file output-filename)
-              (if *ffmpeg-path*
-                  (unless (probe-file *ffmpeg-path*)
-                    (error "ffmpeg binary not found at ~s; you will need to update ~s to point to ffmpeg." *ffmpeg-path* '*ffmpeg-path*))
-                  (error "~s is nil; you will need to set it to point to your ffmpeg binary." '*ffmpeg-path*))
-              (unless (probe-file file)
-                (error 'file-does-not-exist :pathname file))
-              (ensure-directories-exist output-directory)
-              (uiop:run-program (list *ffmpeg-path*
-                                      "-i" file
-                                      "-ac" (write-to-string num-channels)
-                                      output-filename)))
-            output-filename)))
+     (if (and (position ext extensions :test #'string-equal)
+              (eql num-channels (getf file-metadata :channels)))
+         (if (file-exists-p file)
+             file
+             (error 'file-does-not-exist :pathname file))
+         (let* ((output-directory (merge-pathnames (concat num-channels "-channel/") *bdef-temporary-directory*))
+                (output-filename (concat output-directory
+                                         (uiop:split-name-type filename)
+                                         "." (string-downcase (car extensions)))))
+           (unless (file-exists-p output-filename)
+             (if *ffmpeg-path*
+                 (unless (file-exists-p *ffmpeg-path*)
+                   (error "ffmpeg binary not found at ~s; you will need to update ~s to point to ffmpeg." *ffmpeg-path* '*ffmpeg-path*))
+                 (error "~s is nil; you will need to set it to point to your ffmpeg binary." '*ffmpeg-path*))
+             (unless (file-exists-p file)
+               (error 'file-does-not-exist :pathname file))
+             (ensure-directories-exist output-directory)
+             (uiop:run-program (list *ffmpeg-path*
+                                     "-i" file
+                                     "-ac" (write-to-string num-channels)
+                                     output-filename)))
+           output-filename))
      file-metadata)))
 
 (defun file-metadata (file)
   "Get the metadata of FILE as a plist."
   (let* ((json (jsown:parse
-                (uiop:run-program (list *ffprobe-path* "-v" "quiet" "-print_format" "json" "-show_format" "-show_streams" (uiop:native-namestring file))
+                (uiop:run-program (list *ffprobe-path* "-v" "quiet" "-print_format" "json" "-show_format" "-show_streams" (ensure-namestring file))
                                   :output (list :string :stripped t)
                                   :ignore-error-status t)))
          (streams (jsown:filter json "streams"))
@@ -217,8 +225,8 @@ Note that this function will block if the specified metadata is one of the `*bde
 Without VALUE, bdef will look up and return the bdef that already exists with the given name. If NAME is a pathname or string, it's assumed to be the name of a file, which is automatically loaded if necessary."
   (check-type name (or bdef pathname (and string-designator (not null))))
   (assert (not (equal name value)) (name value) "Cannot set a bdef to itself.")
-  (let ((name (if (typep name '(or string pathname))
-                  (uiop:native-namestring name)
+  (let ((name (if (pathname-designator-p name)
+                  (ensure-namestring name)
                   name)))
     (unless value-provided-p ;; FIX: read the file if only a filename is provided and it hasn't been read yet
       (return-from bdef (if-let ((bdef (find-bdef name :errorp nil :dictionary dictionary)))
@@ -227,10 +235,10 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
                               (bdef name name)
                               (find-bdef name :dictionary dictionary)))))
     (setf (find-bdef name) (etypecase value
-                             (symbol (uiop:native-namestring value))
+                             (symbol (ensure-namestring value))
                              (bdef value)
                              (string
-                              (let* ((path (uiop:native-namestring value))
+                              (let* ((path (ensure-namestring value))
                                      (bdef (bdef-load path :num-channels num-channels :wavetable wavetable :backend backend)))
                                 (if (stringp name)
                                     bdef
@@ -352,11 +360,13 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
 
 (defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) id metadata)
   (declare (ignorable id wavetable))
-  (let ((original-file (bdef-ensure-key object))
+  (let ((original-file (ensure-namestring file))
         (backend (or backend
                      (car *bdef-backends*)
-                     (error "No bdef backends are currently enabled. Enable one by loading its subsystem."))))
-    (unless (probe-file original-file)
+                     (error "No bdef backends are currently enabled. Enable one by loading its subsystem.")))
+        (num-channels (or num-channels
+                          (if wavetable 1 2))))
+    (unless (file-exists-p original-file)
       (error 'file-does-not-exist :pathname original-file))
     (multiple-value-bind (file file-metadata)
         (ensure-readable-audio-file original-file :num-channels num-channels :extensions (bdef-backend-supported-file-types backend))
