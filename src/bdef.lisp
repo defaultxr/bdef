@@ -237,7 +237,7 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
     (setf (find-bdef name) (etypecase value
                              (symbol (ensure-namestring value))
                              (bdef value)
-                             (string
+                             ((or string pathname)
                               (let* ((path (ensure-namestring value))
                                      (bdef (bdef-load path :num-channels num-channels :wavetable wavetable :backend backend)))
                                 (if (stringp name)
