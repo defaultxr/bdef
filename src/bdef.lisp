@@ -36,7 +36,8 @@ Note that backends are made available by loading the relevant bdef subsystem wit
 
 (defun ensure-namestring (filename)
   "Get the full path to FILENAME."
-  (uiop:native-namestring (uiop:ensure-pathname filename :want-non-wild t)))
+  ;; uiop:native-namestring is used twice to ensure path abbreviations (like ~ for $HOME) are expanded.
+  (uiop:native-namestring (uiop:native-namestring (uiop:ensure-pathname filename :want-non-wild t))))
 
 (defun file-exists-p (filename)
   "True if FILENAME names a file that exists. This function is needed to ensure characters like ? are not interpreted as Common Lisp pathname wildcards."
