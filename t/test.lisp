@@ -13,7 +13,7 @@
 
 (test undocumented-symbols
   "Check for any undocumented exported symbols"
-  (let ((undocumented (undocumented-symbols :bdef)))
+  (let ((undocumented (package-undocumented-symbols :bdef)))
     (is-false undocumented
               "some exported symbols do not have docstrings: ~s"
               undocumented)))
