@@ -359,7 +359,7 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
 - wavetable - Whether to load the object in wavetable format. If T, the buffer length will be the next power of two. If a number is provided, load the object as a wavetable of that size.
 - metadata - Plist of metadata to include in the bdef."))
 
-(defmethod bdef-load ((object string) &rest args &key backend (num-channels 2) (wavetable nil) id metadata)
+(defmethod bdef-load ((file string) &rest args &key backend (num-channels 2) (wavetable nil) id metadata)
   (declare (ignorable id wavetable))
   (let ((original-file (ensure-namestring file))
         (backend (or backend
