@@ -99,8 +99,8 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 
 (defun %splits-conversion-function-name (splits unit)
   "Get the name of the conversion function to convert SPLITS' unit type into the unit specified."
-  (let ((unit (%splits-ensure-unit unit))
-        (unit-slot (slot-value splits 'unit)))
+  (let ((unit (symbol-name (%splits-ensure-unit unit)))
+        (unit-slot (symbol-name (slot-value splits 'unit))))
     (if (string= unit unit-slot)
         'identity
         (intern (concat unit-slot "-" unit) 'bdef))))
