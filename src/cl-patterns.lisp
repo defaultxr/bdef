@@ -65,7 +65,7 @@
                    :splits (pattern-as-pstream splits)
                    :split (pattern-as-pstream split))))
 
-(defmethod next ((psplits psplits-pstream))
+(defmethod next ((psplits psplits-pstream)) ; FIX: implement UNIT
   (with-slots (splits split) psplits
     (when-let ((splits (if splits
                            (next splits)

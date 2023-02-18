@@ -2,6 +2,7 @@
 ;; FIX: allow a sound to be loaded as a wavetable and a normal sound at the same time
 ;; FIX: also ensure a sound can be loaded multiple times with different number of channels
 ;; FIX: make all methods like `splits-bdef', `bdef-buffer', `bdef-sample-rate', etc take an errorp argument to determine whether to error if the data is not available
+;; FIX: auto-metadata should just become an interface over a more general hook mechanism
 
 (in-package #:bdef)
 
@@ -229,7 +230,7 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
   (let ((name (if (pathname-designator-p name)
                   (ensure-namestring name)
                   name)))
-    (unless value-provided-p ;; FIX: read the file if only a filename is provided and it hasn't been read yet
+    (unless value-provided-p ; FIX: read the file if only a filename is provided and it hasn't been read yet
       (return-from bdef (if-let ((bdef (find-bdef name :errorp nil :dictionary dictionary)))
                           bdef
                           (if (stringp name)
@@ -340,7 +341,7 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
     "Deprecated alias for (keys (bdef-metadata bdef))."
     (keys (bdef-metadata bdef))))
 
-(defun bdef-splits (bdef) ;; FIX: this should return all of them as a list
+(defun bdef-splits (bdef) ; FIX: this should return all of them as a list
   "Get any `splits' from BDEF's metadata, searching in preferred order (i.e. :splits key first, etc)."
   (let ((bdef (find-bdef bdef)))
     (dolist (key (list :splits :onsets :beats))
@@ -379,14 +380,14 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
               (find-bdef file) original-file
               (find-bdef original-file) bdef)
         (doplist (key value file-metadata)
-          (unless (eql key :channels) ;; the channels key is inserted by the `file-metadata' function for the number of channels the source (pre-conversion) has
+          (unless (eql key :channels) ; the channels key is inserted by the `file-metadata' function for the number of channels the source (pre-conversion) has
             (if (member key (list :bpm :tbpm))
                 (let ((parsed (parse-float:parse-float value)))
                   (unless (= 0 parsed)
                     (setf (bdef-metadata bdef :bpm) parsed)))
                 (setf (bdef-metadata bdef key) value))))
         (doplist (key function *bdef-auto-metadata*)
-          (unless (or (bdef-metadata bdef key) ;; we trust the file's tags; no need to detect the bpm if we already know it
+          (unless (or (bdef-metadata bdef key) ; we trust the file's tags; no need to detect the bpm if we already know it
                       (getf metadata key))
             (let ((k key)
                   (f function))

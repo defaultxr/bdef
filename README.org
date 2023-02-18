@@ -37,17 +37,17 @@ To load a buffer from a file, provide the path to the ~bdef~ function:
 
 #+BEGIN_SRC lisp
 ;; cl-collider:
-(synth :playbuf :buffer (bdef :foo)) ;; will work if you've loaded the bdef/cl-collider system.
+(synth :playbuf :buffer (bdef :foo)) ; will work if you've loaded the bdef/cl-collider system.
 
 ;; cl-patterns:
-(play (event :instrument :playbuf :buffer :foo)) ;; will work if you've loaded the bdef/cl-patterns system.
+(play (event :instrument :playbuf :buffer :foo)) ; will work if you've loaded the bdef/cl-patterns system.
 ;; Notice that you can just specify the bdef name as a symbol without even having to use the bdef function! The same is true in patterns too.
 #+END_SRC
 
 Metadata can be associated with bdefs for various uses:
 
 #+BEGIN_SRC lisp
-(setf (bdef-metadata :foo :bpm) 120) ;; set the "bpm" metadatum to 120
+(setf (bdef-metadata :foo :bpm) 120) ; set the "bpm" metadatum to 120
 #+END_SRC
 
 Some metadata is automatically generated; for example, the tempo may be automatically detected from the filename or id3 tags.
@@ -80,19 +80,19 @@ Compare:
 #+BEGIN_SRC lisp
   (defparameter *buf* (cl-collider:buffer-read "/buffer.wav"))
 
-  (defparameter *buf* (cl-collider:buffer-read "/buffer.wav")) ;; the same variable, and same file!
+  (defparameter *buf* (cl-collider:buffer-read "/buffer.wav")) ; the same variable, and same file!
 
-  (length (remove-if #'null (slot-value *s* 'cl-collider::buffers))) ;; => 2 -- duplicate buffers!
+  (length (remove-if #'null (slot-value *s* 'cl-collider::buffers))) ; => 2 -- duplicate buffers!
 #+END_SRC
 
 versus:
 
 #+BEGIN_SRC lisp
-  (bdef :buf "/buffer.wav") ;; here we give it the name :buf
+  (bdef :buf "/buffer.wav") ; here we give it the name :buf
 
-  (bdef :foo "/buffer.wav") ;; same file, different "name"...
+  (bdef :foo "/buffer.wav") ; same file, different "name"...
 
-  (length (remove-if #'null (slot-value *s* 'cl-collider::buffers))) ;; => 1 -- no duplicate buffers :D
+  (length (remove-if #'null (slot-value *s* 'cl-collider::buffers))) ; => 1 -- no duplicate buffers :D
 #+END_SRC
 
 ...To force a file to be reloaded, simply call ~bdef-free~ on it, then call ~bdef~ again.
@@ -100,7 +100,7 @@ versus:
 ** Automatically converts files unsupported by the backend if you have ffmpeg installed:
 
 #+BEGIN_SRC lisp
-(bdef :bar "/blah.mp3") ;; works!
+(bdef :bar "/blah.mp3") ; works!
 #+END_SRC
 
 It does this by storing them in a temporary directory (~/tmp/bdef/~ by default on linux and mac).
@@ -114,7 +114,7 @@ It does this by storing them in a temporary directory (~/tmp/bdef/~ by default o
 ** Supports pathname abbreviations:
 
 #+BEGIN_SRC lisp
-(bdef "~/cool-sound.wav") ;; will find a cool sound in your home directory
+(bdef "~/cool-sound.wav") ; will find a cool sound in your home directory
 #+END_SRC
 
 ** Loads mono files as stereo by default.
@@ -124,7 +124,7 @@ For consistency. To load as mono, supply 1 for ~bdef~'s ~num-channels~ keyword a
 ** Supports loading in wavetable format:
 
 #+BEGIN_SRC lisp
-(bdef "~/wilhelm.wav" :wavetable t) ;; load the Wilhelm scream as a wavetable
+(bdef "~/wilhelm.wav" :wavetable t) ; load the Wilhelm scream as a wavetable
 #+END_SRC
 
 ** Supports loading envelopes as buffers:
@@ -134,9 +134,9 @@ Either as wavetables, or standard.
 ** Integration with [[https://github.com/byulparan/cl-collider][cl-collider]]:
 
 #+BEGIN_SRC lisp
-(cl-collider:bufnum (bdef :sound)) ;; returns the buffer number.
+(cl-collider:bufnum (bdef :sound)) ; returns the buffer number.
 
-(cl-collider:synth :playbuf :bufnum (bdef :sound)) ;; plays the buffer.
+(cl-collider:synth :playbuf :bufnum (bdef :sound)) ; plays the buffer.
 #+END_SRC
 
 Load the ~bdef/cl-collider~ system to enable this.
@@ -144,9 +144,9 @@ Load the ~bdef/cl-collider~ system to enable this.
 ** Integration with [[https://github.com/defaultxr/cl-patterns][cl-patterns]]:
 
 #+BEGIN_SRC lisp
-(cl-patterns:play (bdef :sound)) ;; plays the buffer using the *cl-collider-buffer-preview-synth* set in cl-patterns.
+(cl-patterns:play (bdef :sound)) ; plays the buffer using the *cl-collider-buffer-preview-synth* set in cl-patterns.
 
-(cl-patterns:play (cl-patterns:event :instrument :playbuf :bufnum (bdef :sound))) ;; automatically converts bdef to the buffer number.
+(cl-patterns:play (cl-patterns:event :instrument :playbuf :bufnum (bdef :sound))) ; automatically converts bdef to the buffer number.
 #+END_SRC
 
 Load the ~bdef/cl-patterns~ system to enable this.
@@ -164,9 +164,9 @@ Enable the cl-collider backend, for example, like so:
 ** Allows metadata about the buffer to be stored:
 
 #+BEGIN_SRC lisp
-(setf (bdef-metadata (bdef :snd) :bpm) 99) ;; set :snd's tempo to 99 BPM.
+(setf (bdef-metadata (bdef :snd) :bpm) 99) ; set :snd's tempo to 99 BPM.
 
-(bdef-metadata (bdef :snd) :bpm) ;; get the stored bpm value.
+(bdef-metadata (bdef :snd) :bpm) ; get the stored bpm value.
 #+END_SRC
 
 ** Automatically set various metadata when a bdef is created:
@@ -176,7 +176,7 @@ Enable the cl-collider backend, for example, like so:
 (bdef :my-file "~/my-file-128bpm.wav")
 
 ;; the bpm is automatically stored as metadata:
-(bdef-metadata :my-file :bpm) ;; => 128
+(bdef-metadata :my-file :bpm) ; => 128
 #+END_SRC
 
 You can also add your own auto-metadata keys with the ~define-bdef-auto-metadata~ macro or ~set-bdef-auto-metadata~ function, or remove them with the ~remove-bdef-auto-metadata~ function.
@@ -186,13 +186,13 @@ Additional metadata is loaded asynchronously in background threads using futures
 ** Automatically generate metadata from functions:
 
 #+BEGIN_SRC lisp
-(setf (bdef-metadata :foo :bpm) 142) ;; sets the "tempo" metadata key instead to its beats per minute value
+(setf (bdef-metadata :foo :bpm) 142) ; sets the "tempo" metadata key instead to its beats per minute value
 
 ;; tempo is stored as beats per second:
-(bdef-metadata :foo :tempo) ;; => 71/30 (142 beats per minute in beats per second)
+(bdef-metadata :foo :tempo) ; => 71/30 (142 beats per minute in beats per second)
 
 ;; beats per minute is still available, dynamically calculated from the tempo key:
-(bdef-metadata :foo :bpm) ;; => 142
+(bdef-metadata :foo :bpm) ; => 142
 #+END_SRC
 
 You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
@@ -200,13 +200,13 @@ You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 ** "Splits" functionality to define split points or regions in buffers:
 
 #+BEGIN_SRC lisp
-  (make-splits (list 0 0.25 0.5 0.75) :bdef (bdef :foo)) ;; splits at the start, 25%, 50%, and 75% into the file.
+  (make-splits (list 0 0.25 0.5 0.75) :bdef (bdef :foo)) ; splits at the start, 25%, 50%, and 75% into the file.
 
-  (splits-from-audacity-labels "/path/to/label.txt") ;; make a splits object from an Audacity labels file.
+  (splits-from-audacity-labels "/path/to/label.txt") ; make a splits object from an Audacity labels file.
 
-  (setf (bdef-splits :my-bdef) *) ;; set the :my-bdef bdef's :splits metadatum to the splits object generated from the above.
+  (setf (bdef-splits :my-bdef) *) ; set the :my-bdef bdef's :splits metadatum to the splits object generated from the above.
 
-  (splits-point :my-bdef 3 :start :second) ;; get the start of :my-bdef's fourth split in seconds.
+  (splits-point :my-bdef 3 :start :second) ; get the start of :my-bdef's fourth split in seconds.
 #+END_SRC
 
 ** Splits integration with cl-patterns:
@@ -214,8 +214,8 @@ You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 #+BEGIN_SRC lisp
   (pbind :instrument :playbuf
          :bufnum (bdef :my-bdef)
-         :split (pwhite 0 (1- (splits-length :my-bdef))) ;; pick a random split
-         :embed (psplits) ;; the psplits pattern yields events with :start, :end, and :dur keys to play the split specified by :split from the :splits metadatum of the bdef specified as :bufnum.
+         :split (pwhite 0 (1- (splits-length :my-bdef))) ; pick a random split
+         :embed (psplits) ; the psplits pattern yields events with :start, :end, and :dur keys to play the split specified by :split from the :splits metadatum of the bdef specified as :bufnum.
          :dur 1)
 #+END_SRC
 
@@ -224,15 +224,15 @@ You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 #+BEGIN_SRC lisp
 (bdef::splits-from-aubio-onsets "/path/to/audio/file.wav")
 
-(bdef :pee "/path/to/pee.wav") ;; since no BPM is listed in the filename, aubio is used to detect it (if installed)...
+(bdef :pee "/path/to/pee.wav") ; since no BPM is listed in the filename, aubio is used to detect it (if installed)...
 
-(bdef-metadata :pee :tempo) ;; ...and it is stored in the bdef's :tempo metadatum! nice!
+(bdef-metadata :pee :tempo) ; ...and it is stored in the bdef's :tempo metadatum! nice!
 #+END_SRC
 
 ** Ability to import splits from OP-1 drumset file metadata:
 
 #+begin_src lisp
-(bdef::splits-from-op-1-drumset "/path/to/op-1-drumset.aif") ;; generates a splits by parsing the metadata in the file.
+(bdef::splits-from-op-1-drumset "/path/to/op-1-drumset.aif") ; generates a splits by parsing the metadata in the file.
 #+end_src
 
 Note that any ~aif~ or ~aiff~ file will automatically be checked for OP-1 metadata, which will be parsed and stored in the ~splits~ bdef metadata key if it is found.

@@ -40,7 +40,7 @@
 (defmethod bdef-backend-free ((buffer cl-collider::buffer))
   (cl-collider:buffer-free buffer))
 
-(defmethod bdef-load ((buffer cl-collider::buffer) &key) ;; FIX: implement this
+(defmethod bdef-load ((buffer cl-collider::buffer) &key) ; FIX: implement this
   ;; check if the buffer is already assigned to a bdef
   ;; if it is, we can just point to that and don't need to re-run the auto-metadata functions
   (error "Loading an existing buffer to a bdef is not yet implemented."))

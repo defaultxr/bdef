@@ -259,7 +259,7 @@ NOTE: If \"bpm\" is not in the string, then this function will look for a number
 
 ;;; aubio
 
-(defvar *aubio-python-directory* #P"~/misc/aubio/python/demos/" ;; FIX: can we do without this?
+(defvar *aubio-python-directory* #P"~/misc/aubio/python/demos/" ; FIX: can we do without this?
         "The path to Aubio's \"demos\" directory.")
 
 (defun aubio-onsets (file &rest args &key (utility :onset) (algorithm :hfc) (threshold 0.3) (silence -90) (minimum-interval 0.012) (buf-size 512) (hop-size 256) &allow-other-keys)
@@ -313,7 +313,7 @@ See also: `splits', `aubio-onsets'"
 
 (defun aubio-demo-tempo (file &key sample-rate)
   "Use aubio's demo_tempo.py to get a list of beats in FILE. The returned list gives onsets in seconds from the start of the file."
-  (declare (ignore sample-rate)) ;; FIX: actually use the sample-rate key
+  (declare (ignore sample-rate)) ; FIX: actually use the sample-rate key
   ;; FIX: uiop:run-program allows you to read output as a stream. that might be better?
   (let ((file (ensure-readable-audio-file (bdef-file file))))
     (labels ((split (string &optional list)
@@ -321,7 +321,7 @@ See also: `splits', `aubio-onsets'"
                  (if start
                      (split (subseq string (1+ start)) (append list (list (subseq string 0 start))))
                      (append list (list string))))))
-      (mapcar #'read-from-string ;; use "aubiocut -b FILE" to get a file cut by beats
+      (mapcar #'read-from-string ; use "aubiocut -b FILE" to get a file cut by beats
               (split (uiop:run-program (list "python" (namestring (merge-pathnames *aubio-python-directory* "demo-tempo.py")) (ensure-namestring file))
                                        :output '(:string :stripped t)))))))
 
@@ -349,7 +349,7 @@ See also: `splits', `aubio-onsets'"
   (loop :for idx :from 0 :below (length splits)
         :for start := (splits-point splits idx :start :second)
         :for end := (or (splits-point splits idx :end :second)
-                        (ignore-errors (splits-point splits (1+ idx) :start :second)) ;; FIX: just use ensure-end, (or maybe integrate ensure-end into the regular splits-ends function?)
+                        (ignore-errors (splits-point splits (1+ idx) :start :second)) ; FIX: just use ensure-end, (or maybe integrate ensure-end into the regular splits-ends function?)
                         (end-point splits :second))
         :for comment := (splits-point splits idx :comment)
         :do (format stream "~a~c~a~c~a~%" start #\tab end #\tab (or comment idx))))
@@ -402,10 +402,10 @@ See also: `op-1-format-to-frame'"
          (loop :for peek := (read-byte stream nil nil)
                :if (null peek)
                  :do (not-valid)
-               :if (= peek 111) ;; #\o
+               :if (= peek 111) ; #\o
                  :do (let ((array (make-array 3 :initial-element nil)))
                        (read-sequence array stream)
-                       (when (equalp #(112 45 49) array) ;; #\p #\- #\1
+                       (when (equalp #(112 45 49) array) ; #\p #\- #\1
                          (let (accum)
                            (loop :do (push (read-byte stream nil nil) accum)
                                  :until (or (null (car accum))
