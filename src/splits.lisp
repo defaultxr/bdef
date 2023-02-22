@@ -298,7 +298,7 @@ See also: `splits', `aubio-onsets'"
          (when (bdef-p file)
            (list :bdef file))))
 
-(uiop:with-deprecation (:style-warning)
+(uiop:with-deprecation (:warning)
   (defun splits-from-aubio-onsets (file &rest args &key &allow-other-keys)
     "Deprecated alias for (splits-from-aubio FILE :utility :onset ...)."
     (apply #'splits-from-aubio file :utility :onset args)))
@@ -354,7 +354,7 @@ See also: `splits', `aubio-onsets'"
         :for comment := (splits-point splits idx :comment)
         :do (format stream "~a~c~a~c~a~%" start #\tab end #\tab (or comment idx))))
 
-(uiop:with-deprecation (:style-warning)
+(uiop:with-deprecation (:warning)
   (defun audacity-labels-from-splits (splits &optional (file #P"~/label.txt"))
     "Deprecated alias for (splits-export SPLITS FILE :audacity)."
     (splits-export splits file :audacity)))
