@@ -44,8 +44,8 @@ Note that backends are made available by loading the relevant bdef subsystem wit
   "True if FILENAME names a file that exists. This function is needed to ensure characters like ? are not interpreted as Common Lisp pathname wildcards."
   (probe-file (uiop:ensure-pathname filename :want-non-wild t)))
 
-(defun ensure-readable-audio-file (file &key num-channels (extensions (list :wav :aif :aiff)))
-  "If FILE ends in any of EXTENSIONS, return it unchanged. Otherwise, use ffmpeg to convert it to the first format in EXTENSIONS and return the path to the result. The converted file is stored under `*bdef-temporary-directory*'. Returns the file's metadata as a second value.
+(defun ensure-readable-audio-file (file &key num-channels (backend (first *bdef-backends*)) (extensions (bdef-backend-supported-file-types backend)))
+  "Use ffmpeg to convert FILE to the first format in EXTENSIONS if it is not already in one of those formats. Returns the path to the converted file (or FILE if no conversion is needed), and the file's metadata. The converted file is stored under `*bdef-temporary-directory*'.
 
 See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
   (let* ((file (ensure-namestring file))
@@ -98,9 +98,9 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
 ;;; backend generics
 
 (defgeneric bdef-backend-supported-file-types (backend)
-  (:documentation "Method returning a list of file extensions as keywords naming the file types that the backend natively supports (i.e. that don't need conversion).
+  (:documentation "Get a list of file extensions as keywords naming the file types that the backend natively supports (i.e. that don't need conversion).
 
-See also: `bdef-backend-load'"))
+See also: `bdef-backend-load', `ensure-readable-audio-file'"))
 
 (defgeneric bdef-backend-load (backend object &key)
   (:documentation "Load a file or other object into a bdef via the specified backend. This method should return the backend's buffer object. OBJECT will either be a string (the path to the file to load) or a list of strings (if the files should be loaded as consecutive buffers, i.e. for SuperCollider's VOsc UGen). Requested files will always be in a format that the backend reports supporting via the `bdef-backend-supported-file-types' method.
@@ -371,8 +371,8 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
     (unless (file-exists-p original-file)
       (error 'file-does-not-exist :pathname original-file))
     (multiple-value-bind (file file-metadata)
-        (ensure-readable-audio-file original-file :num-channels num-channels :extensions (bdef-backend-supported-file-types backend))
-      (let* ((buffer (apply #'bdef-backend-load backend file args))
+        (ensure-readable-audio-file original-file :num-channels num-channels :backend backend)
+      (let* ((buffer (apply #'bdef-backend-load backend file :num-channels num-channels args))
              (bdef (make-instance 'bdef
                                   :name file
                                   :buffer buffer)))

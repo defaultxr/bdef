@@ -1,7 +1,13 @@
 (in-package #:bdef)
 
+(defvar *bdef-backend-supercollider-supported-file-types* (list :wav :aif :aiff)
+  "List of file extensions denoting formats supported by the backend, as keywords. Generally, you should use `bdef-backend-supported-file-types' instead.")
+
 (defmethod bdef-backend-supported-file-types ((backend (eql :cl-collider)))
-  (list :wav :aif :aiff))
+  *bdef-backend-supercollider-supported-file-types*)
+
+(defmethod (setf bdef-backend-supported-file-types) (formats (backend (eql :cl-collider)))
+  (setf *bdef-backend-supercollider-supported-file-types* (mapcar #'make-keyword (ensure-list formats))))
 
 (defmethod bdef-backend-load ((backend (eql :cl-collider)) (file string) &key wavetable id server &allow-other-keys)
   (apply (if wavetable
