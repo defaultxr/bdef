@@ -23,9 +23,7 @@
 (defmethod bdef-backend-load ((backend (eql :cl-collider)) (object list) &key wavetable &allow-other-keys)
   (error "SuperCollider backend does not yet support loading a list of files.")
   (let* ((buffer (cl-collider:buffer-alloc (length object)))
-         (bdef (make-instance 'bdef
-                              :key object
-                              :buffer buffer)))
+         (bdef (make-instance 'bdef :name object :buffer buffer)))
     (cl-collider:buffer-setn buffer object)
     (setf (bdef-metadata bdef :wavetable) (and wavetable t))
     bdef))
