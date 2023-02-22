@@ -82,7 +82,7 @@ Compare:
 
   (defparameter *buf* (cl-collider:buffer-read "/buffer.wav")) ; the same variable, and same file!
 
-  (length (remove-if #'null (slot-value *s* 'cl-collider::buffers))) ; => 2 -- duplicate buffers!
+  (length (remove nil (slot-value *s* 'cl-collider::buffers))) ; => 2 -- duplicate buffers!
 #+END_SRC
 
 versus:
@@ -92,7 +92,7 @@ versus:
 
   (bdef :foo "/buffer.wav") ; same file, different "name"...
 
-  (length (remove-if #'null (slot-value *s* 'cl-collider::buffers))) ; => 1 -- no duplicate buffers :D
+  (length (remove nil (slot-value *s* 'cl-collider::buffers))) ; => 1 -- no duplicate buffers :D
 #+END_SRC
 
 ...To force a file to be reloaded, simply call ~bdef-free~ on it, then call ~bdef~ again.
