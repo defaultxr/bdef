@@ -139,7 +139,7 @@ See also: `bdef-backend-load'"))
 
 (define-bdef-auto-metadata :tempo
   (when-let* ((path (bdef-file bdef))
-              (bpm (or (extract-bpm-from-string path)
+              (bpm (or (string-extract-bpm path)
                        (bpm-tools-bpm path))))
     (/ bpm 60)))
 

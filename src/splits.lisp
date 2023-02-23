@@ -237,25 +237,21 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 
 ;; filename / metadata
 
-(defun extract-bpm-from-string (string)
-  "Extract the BPM from a string (typically a filename). Returns NIL if no BPM-like string is found.
-
-NOTE: If \"bpm\" is not in the string, then this function will look for a number in the range 50-400, starting from the end of the string."
-  (when string
-    ;; (warn "extract-bpm-from-string is not done yet!")
-    (let* ((split (string-split string :char-bag (list #\space #\_ #\-)))
-           (bpm-pos (position-if (lambda (s)
-                                   (search "bpm" (string-downcase s)))
-                                 split
-                                 :from-end t)))
-      (values (if bpm-pos
-                  (or (parse-float:parse-float (elt split bpm-pos) :junk-allowed t)
-                      (parse-float:parse-float (elt split (1- bpm-pos)) :junk-allowed t))
-                  (loop :for i :in (nreverse split)
-                        :for bpm = (parse-float:parse-float i :junk-allowed t)
-                        :if (and (numberp bpm)
-                                 (>= 400 bpm 50))
-                          :return bpm))))))
+(defun string-extract-bpm (string &key (min-bpm 50) (max-bpm 400))
+  "Extract the BPM from a string (typically a filename), or nil if no BPM-like string is found. If \"bpm\" is not in the string, then this function will look for a number in the range MIN-BPM to MAX-BPM, starting from the end of the string."
+  (when (pathnamep string)
+    (return-from string-extract-bpm (namestring string)))
+  (check-type string string)
+  (let* ((split (string-split string :char-bag (list #\space #\_ #\-)))
+         (bpm-pos (position-if (lambda (s) (search "bpm" s :test #'char-equal)) split :from-end t)))
+    (values (if bpm-pos
+                (or (parse-float:parse-float (elt split bpm-pos) :junk-allowed t)
+                    (parse-float:parse-float (elt split (1- bpm-pos)) :junk-allowed t))
+                (loop :for i :in (nreverse split)
+                      :for bpm := (parse-float:parse-float i :junk-allowed t)
+                      :if (and (numberp bpm)
+                               (<= min-bpm bpm max-bpm))
+                        :return bpm)))))
 
 ;;; aubio
 
