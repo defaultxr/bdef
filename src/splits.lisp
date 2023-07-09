@@ -216,13 +216,19 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
   (bdef-buffer (splits-bdef this)))
 
 (defmethod bdef-length ((this splits))
-  (bdef-length (splits-bdef this)))
+  (or (splits-metadata this :length)
+      (when-let ((bdef (splits-bdef this)))
+        (bdef-length bdef))))
 
 (defmethod bdef-sample-rate ((this splits))
-  (bdef-sample-rate (splits-bdef this)))
+  (or (splits-metadata this :sample-rate)
+      (when-let ((bdef (splits-bdef this)))
+        (bdef-sample-rate bdef))))
 
 (defmethod bdef-channels ((this splits))
-  (bdef-channels (splits-bdef this)))
+  (or (splits-metadata this :channels)
+      (when-let ((bdef (splits-bdef this)))
+        (bdef-channels bdef))))
 
 (defmethod bdef-id ((this splits))
   (bdef-id (splits-bdef this)))
