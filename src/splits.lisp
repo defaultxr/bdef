@@ -239,7 +239,9 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 (defmethod bdef-frames ((this splits) &key start end channels)
   (bdef-frames (splits-bdef this) :start start :end end :channels channels))
 
-;;; splits / analysis methods
+;;; splits import/export
+
+;;; splits import/export formats
 
 ;; filename / metadata
 
@@ -259,10 +261,10 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
                                (<= min-bpm bpm max-bpm))
                         :return bpm)))))
 
-;;; aubio
+;; aubio
 
-(defvar *aubio-python-directory* #P"~/misc/aubio/python/demos/" ; FIX: can we do without this?
-        "The path to Aubio's \"demos\" directory.")
+(defvar *aubio-python-directory* "~/misc/aubio/python/demos/" ; FIX: can we do without this?
+  "The path to Aubio's \"demos\" directory.")
 
 (defun aubio-onsets (file &rest args &key (utility :onset) (algorithm :hfc) (threshold 0.3) (silence -90) (minimum-interval 0.012) (buf-size 512) (hop-size 256) &allow-other-keys)
   "Use the \"aubioonset\" or \"aubiotrack\" utility to get a list of onset points in FILE in seconds. FILE can be a filename, a bdef, or a supported buffer object. UTILITY specifies whether to use Aubio's \"onset\" or \"track\" utility. The rest of the arguments are sent as parameters to the Aubio utility in use; see Aubio's documentation for more information on them."
@@ -327,14 +329,14 @@ See also: `splits', `aubio-onsets'"
               (split (uiop:run-program (list "python" (namestring (merge-pathnames *aubio-python-directory* "demo-tempo.py")) (ensure-namestring file))
                                        :output '(:string :stripped t)))))))
 
-;;; bpm-tools
+;; bpm-tools
 
 (defun bpm-tools-bpm (file)
   "Use bpm-tools' \"bpm\" utility to get the BPM of FILE."
   (values (read-from-string (uiop:run-program (format nil "sox -V1 \"~a\" -r 44100 -e float -c 1 -t raw - | bpm" file)
                                               :force-shell t :output '(:string :stripped t)))))
 
-;;; audacity labels
+;; audacity labels
 
 (defun splits-from-audacity-labels (file)
   "Make a `splits' from an Audacity labels file."
@@ -361,7 +363,7 @@ See also: `splits', `aubio-onsets'"
     "Deprecated alias for (splits-export SPLITS FILE :audacity)."
     (splits-export splits file :audacity)))
 
-;;; op-1 drumsets
+;; op-1 drumsets
 ;; https://github.com/padenot/libop1/blob/master/src/op1_drum_impl.cpp
 
 (defconstant +op-1-drumkit-end+ #x7FFFFFFE)
@@ -374,17 +376,14 @@ See also: `splits', `aubio-onsets'"
   "Convert a frame number to the OP-1 split point format.
 
 See also: `op-1-format-to-frame'"
-  (* (floor +op-1-drumkit-end+ +op-1-bytes-in-12-sec+)
-     frame +size-of-uint16-t+))
+  (* (floor +op-1-drumkit-end+ +op-1-bytes-in-12-sec+) frame +size-of-uint16-t+))
 
 (defun op-1-format-to-frame (op-1)
   "Convert a frame number to the OP-1 split point format.
 
 See also: `op-1-format-to-frame'"
-  (round
-   (/  op-1
-       (* (floor +op-1-drumkit-end+ +op-1-bytes-in-12-sec+)
-          +size-of-uint16-t+))))
+  (round (/ op-1 (* (floor +op-1-drumkit-end+ +op-1-bytes-in-12-sec+)
+                    +size-of-uint16-t+))))
 
 (defun splits-from-op-1-drumset (drumset &key (if-invalid :error))
   "Make a `splits' object by reading the metadata from an OP-1 format drumset file. IF-INVALID specifies what to do if DRUMSET can't be parsed as an op-1 drumset file; it can be either :ERROR to signal an error, or NIL to simply return nil."
@@ -420,14 +419,14 @@ See also: `op-1-format-to-frame'"
                                                 :ends (mapcar #'op-1-format-to-frame (jsown:val json "end"))
                                                 :unit :samples)))))))))))))
 
-;;; snd marks
+;; snd marks
 ;; TODO
 
-;;; echo nest / amen
+;; echo nest / amen
 ;; https://github.com/algorithmic-music-exploration/amen
 ;; TODO
 
-;;; acousticbrainz
+;; acousticbrainz
 ;; https://beets.readthedocs.io/en/v1.4.7/plugins/acousticbrainz.html
 ;; TODO
 
