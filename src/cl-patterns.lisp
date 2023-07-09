@@ -128,22 +128,23 @@ See also: `splits-event', `bdef-splits'"
 
 (defmethod next ((psplits psplits-pstream)) ; FIX: implement UNIT
   (with-slots (splits split) psplits
-    (when-let ((splits (if splits
-                           (next splits)
-                           (or (event-value *event* :splits)
-                               (when-let ((buffer (or (event-value *event* :buffer)
-                                                      (event-value *event* :bufnum))))
-                                 (typecase buffer
-                                   (bdef::bdef
-                                    (bdef:bdef-splits buffer))
-                                   (symbol
-                                    (bdef:bdef-splits (bdef:find-bdef buffer)))
-                                   (t
-                                    nil))))))
-               (split (if split
-                          (next split)
-                          (event-value *event* :split))))
-      (unless (>= split (bdef:splits-length splits))
-        (bdef::splits-event splits split)))))
+    (let ((splits (if splits
+                      (next splits)
+                      (or (e :splits)
+                          (let ((buffer (or (e :buffer) (e :bufnum))))
+                            (typecase buffer
+                              (null eop)
+                              (bdef:bdef (bdef:bdef-splits buffer))
+                              (symbol (bdef:bdef-splits (bdef:find-bdef buffer)))
+                              (t eop))))))
+          (split (if split
+                     (next split)
+                     (e :split))))
+      (when (or (eop-p splits)
+                (eop-p split))
+        (return-from next eop))
+      (if (>= split (bdef:splits-length splits))
+          eop
+          (bdef:splits-event splits split)))))
 
 (export '(psplits psplits-pstream))
