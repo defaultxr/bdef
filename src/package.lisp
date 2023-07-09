@@ -34,6 +34,7 @@
    #:bdef-tempo
    #:bdef-dur
    #:bdef-splits
+   #:bdef-splits-events
 
    #:bdef-frames
    #:bdef-subseq

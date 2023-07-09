@@ -342,12 +342,20 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
     (keys (bdef-metadata bdef))))
 
 (defun bdef-splits (bdef) ; FIX: this should return all of them as a list
-  "Get any `splits' from BDEF's metadata, searching in preferred order (i.e. :splits key first, etc)."
+  "Get any `splits' from BDEF's metadata, searching in preferred order (i.e. :splits key first, etc).
+
+See also: `bdef-splits-events', `splits-events'"
   (let ((bdef (find-bdef bdef)))
     (dolist (key (list :splits :onsets :beats))
       (when-let ((val (bdef-metadata bdef key)))
         (when (splits-p val)
           (return-from bdef-splits val))))))
+
+(defun bdef-splits-events (bdef &key (unit :percents) (keys (list :start :end :dur :beat)) remove-keys)
+  "Get the `splits' from BDEF's metadata (as per `bdef-splits') as a list of events (as per `splits-events').
+
+See also: `bdef-splits', `splits-events'"
+  (splits-events (bdef-splits bdef) :unit unit :keys keys :remove-keys remove-keys))
 
 (defun (setf bdef-splits) (splits bdef)
   (setf (bdef-metadata (find-bdef bdef) :splits) splits))
