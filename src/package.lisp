@@ -4,6 +4,7 @@
   (:use #:cl
         #:alexandria
         #:mutility)
+  (:shadow #:file-exists-p)
   (:export
 
    ;;; bdef.lisp
