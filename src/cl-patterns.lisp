@@ -1,6 +1,7 @@
 (in-package #:cl-patterns)
 
-(affixnew *dictionary-lookup-functions* 'bdef:bdef)
+(unless (member 'bdef:find-bdef *dictionary-lookup-functions*)
+  (appendf *dictionary-lookup-functions* (list 'bdef:find-bdef)))
 
 ;;; methods
 
