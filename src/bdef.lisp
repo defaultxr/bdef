@@ -319,6 +319,7 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
   (setf (bdef-metadata (find-bdef string) key) value))
 
 (defmethod (setf bdef-metadata) (value (null null) &optional key)
+  (declare (ignore key))
   nil)
 
 (defmethod (setf bdef-metadata) (value (bdef bdef) &optional key)
