@@ -67,8 +67,8 @@ See also: `file-metadata', `*ffmpeg-path*', `*bdef-temporary-directory*'"
            (unless (file-exists-p output-filename)
              (if *ffmpeg-path*
                  (unless (file-exists-p *ffmpeg-path*)
-                   (error "ffmpeg binary not found at ~s; you will need to update ~s to point to ffmpeg." *ffmpeg-path* '*ffmpeg-path*))
-                 (error "~s is nil; you will need to set it to point to your ffmpeg binary." '*ffmpeg-path*))
+                   (error "ffmpeg binary not found at ~S; you will need to update ~S to point to ffmpeg." *ffmpeg-path* '*ffmpeg-path*))
+                 (error "~S is nil; you will need to set it to point to your ffmpeg binary." '*ffmpeg-path*))
              (unless (file-exists-p file)
                (error 'file-does-not-exist :pathname file))
              (ensure-directories-exist output-directory)
@@ -207,18 +207,18 @@ Note that this function will block if the specified metadata is one of the `*bde
 (defmethod print-object ((bdef bdef) stream)
   (with-slots (name buffer) bdef
     (if (slot-boundp bdef 'name)
-        (format stream "(~s ~s)" 'bdef name)
-        (format stream "#<~s>" 'bdef))))
+        (format stream "(~S ~S)" 'bdef name)
+        (format stream "#<~S>" 'bdef))))
 
 (defmethod describe-object ((bdef bdef) stream)
   (with-slots (name buffer metadata) bdef
-    (format stream "~s is a ~s.~%  It is ~s seconds long (~s frames), with ~s channels.~%" bdef 'bdef (bdef-duration bdef) (bdef-length bdef) (bdef-channels bdef))
-    (format stream "~@[  It contains the audio from the file ~s.~%~]" (bdef-file bdef))
-    (format stream "  Names that point to this buffer are: ~s~%" (bdef-names bdef))
+    (format stream "~S is a ~S.~%  It is ~S frames long (~S seconds), with ~S channels.~%" bdef 'bdef (bdef-length bdef) (bdef-duration bdef) (bdef-channels bdef))
+    (format stream "~@[  It contains the audio from the file ~S.~%~]" (bdef-file bdef))
+    (format stream "  Names that point to this buffer are: ~S~%" (bdef-names bdef))
     (when-let ((meta-keys (keys (bdef-metadata bdef))))
       (format stream "  It has the following metadata:~%")
       (dolist (key meta-keys)
-        (format stream "    ~s -> ~s~%" key (bdef-metadata bdef key))))))
+        (format stream "    ~S -> ~S~%" key (bdef-metadata bdef key))))))
 
 ;; FIX: add 'metadata' key. it should probably add to the default metadata fields. if the user doesn't want them, they can provide 'nil' for the key they don't want generated.
 (defun bdef (name &optional (value nil value-provided-p) &key (num-channels 2) wavetable metadata backend (dictionary *bdef-dictionary*))
@@ -410,7 +410,7 @@ See also: `bdef-splits', `splits-events'"
           (setf (bdef-metadata bdef key) value))))))
 
 (defmethod no-applicable-method ((method (eql #'bdef-load)) &rest args)
-  (error "None of the enabled bdef backends support loading ~s." (car args)))
+  (error "None of the enabled bdef backends support loading ~S." (car args)))
 
 (defun bdef-free (bdef &optional (dictionary *bdef-dictionary*))
   "Free BDEF's buffer and remove all names in DICTIONARY that point to it."

@@ -58,7 +58,7 @@ See also: `derive-split-dur', `splits-point'"
               (end-point splits unit)
               (splits-point splits (1+ split) :start unit)))
         (when (eql :error if-uncomputable)
-          (error "Could not derive the end of split ~s for ~s" split splits)))))
+          (error "Could not derive the end of split ~S for ~S" split splits)))))
 
 (defun derive-split-duration (splits start-split &key end-split (if-uncomputable :error)) ; FIX: move outside of cl-patterns.lisp
   "Derive the duration in seconds of the start of START-SPLIT to the end of END-SPLIT. If the duration can't be derived, error if IF-COMPUTABLE is :error, or just return nil if it is nil. If END-SPLIT is nil or not provided, ; FIX

@@ -33,7 +33,7 @@
   (:documentation "List of split data for dividing buffers into pieces."))
 
 (defmethod print-object ((splits splits) stream)
-  (format stream "#<~a :LENGTH ~a :UNIT ~s~@[ :BDEF ~a~]>" 'splits
+  (format stream "#<~A :LENGTH ~A :UNIT ~S~@[ :BDEF ~A~]>" 'splits
           (length (slot-value splits 'starts))
           (slot-value splits 'unit)
           (ignore-errors (splits-bdef splits))))
@@ -333,7 +333,7 @@ See also: `splits', `aubio-onsets'"
 
 (defun bpm-tools-bpm (file)
   "Use bpm-tools' \"bpm\" utility to get the BPM of FILE."
-  (values (read-from-string (uiop:run-program (format nil "sox -V1 \"~a\" -r 44100 -e float -c 1 -t raw - | bpm" file)
+  (values (read-from-string (uiop:run-program (format nil "sox -V1 \"~A\" -r 44100 -e float -c 1 -t raw - | bpm" file)
                                               :force-shell t :output '(:string :stripped t)))))
 
 ;; audacity labels
@@ -356,7 +356,7 @@ See also: `splits', `aubio-onsets'"
                         (ignore-errors (splits-point splits (1+ idx) :start :second)) ; FIX: just use ensure-end, (or maybe integrate ensure-end into the regular splits-ends function?)
                         (end-point splits :second))
         :for comment := (splits-point splits idx :comment)
-        :do (format stream "~a~c~a~c~a~%" start #\tab end #\tab (or comment idx))))
+        :do (format stream "~A~C~A~C~A~%" start #\tab end #\tab (or comment idx))))
 
 (uiop:with-deprecation (:warning)
   (defun audacity-labels-from-splits (splits &optional (file #P"~/label.txt"))
