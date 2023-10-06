@@ -38,6 +38,22 @@
           (slot-value splits 'unit)
           (ignore-errors (splits-bdef splits))))
 
+(defmethod describe-object ((splits splits) stream)
+  (with-slots (starts ends loops comments unit bdef metadata) splits
+    (format stream "~S is a ~S~@[ associated with ~S~].~%" splits 'splits (splits-bdef splits))
+    (format stream "  It contains ~S splits (in ~(~A~)):~%" (splits-length splits) (splits-unit splits))
+    (loop :with unit := (splits-unit splits)
+          :for idx :from 0 :below (splits-length splits)
+          :do (format stream "    ~S~@[ .. ~S~]~@[ (loop: ~S)~]~@[: ~S~]~%"
+                      (splits-point splits idx :start unit)
+                      (splits-point splits idx :end unit)
+                      (splits-point splits idx :loop unit)
+                      (splits-point splits idx :comment unit)))
+    (let ((meta-keys (keys (splits-metadata splits))))
+      (format stream "  It has ~S metadat~1:*~[a.~;um:~:;a:~]~%" (length meta-keys))
+      (dolist (key meta-keys)
+        (format stream "    ~S -> ~S~%" key (splits-metadata splits key))))))
+
 (defun splits-p (object)
   "True if OBJECT is a splits.
 
