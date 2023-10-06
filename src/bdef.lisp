@@ -26,7 +26,7 @@
   #+windows (concat (uiop:getenv-pathname "USERPROFILE") "/AppData/Local/")
   "The path to ffprobe, or nil if ffprobe could not be found.")
 
-(defvar *bdef-backends* (list)
+(defvar *bdef-backends* nil
   "The list of enabled backends. When the user attempts to create a bdef, each backend in this list is used to try to create the bdef from the file or object. If a backend returns nil, the next backend in the list will be tried. This is repeated until the first backend successfully returns a bdef object.
 
 Note that backends are made available by loading the relevant bdef subsystem with Quicklisp or ASDF. For example, if you want to use SuperCollider/cl-collider, load `bdef/cl-collider'. Once you've loaded it, you should see that the :cl-collider keyword is in this list.")
@@ -121,7 +121,7 @@ See also: `bdef-backend-load'"))
 
 ;;; auto-metadata
 
-(defvar *bdef-auto-metadata* (list)
+(defvar *bdef-auto-metadata* nil
   "Plist of keys that will automatically be populated in a bdef's metadata for all newly-created or loaded buffers. The value for each key is the function that generates the value of the key for the bdef metadata. Use the `define-bdef-auto-metadata' macro or `set-bdef-auto-metadata' function to define bdef-auto-metadata keys, or `remove-bdef-auto-metadata' to remove them.")
 
 (defun set-bdef-auto-metadata (key function)
@@ -385,9 +385,7 @@ See also: `bdef-splits', `splits-events'"
     (multiple-value-bind (file file-metadata)
         (ensure-readable-audio-file original-file :num-channels num-channels :backend backend)
       (let* ((buffer (apply #'bdef-backend-load backend file :num-channels num-channels (remove-from-plist args :num-channels)))
-             (bdef (make-instance 'bdef
-                                  :name file
-                                  :buffer buffer)))
+             (bdef (make-instance 'bdef :name file :buffer buffer)))
         (setf (bdef-metadata bdef :original-file) original-file
               (find-bdef file) original-file
               (find-bdef original-file) bdef)

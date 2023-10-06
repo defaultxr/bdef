@@ -10,9 +10,7 @@
   (setf *bdef-backend-supercollider-supported-file-types* (mapcar #'make-keyword (ensure-list formats))))
 
 (defmethod bdef-backend-load ((backend (eql :cl-collider)) (file string) &key wavetable id server &allow-other-keys)
-  (apply (if wavetable
-             #'cl-collider:buffer-read-as-wavetable
-             #'cl-collider:buffer-read)
+  (apply (if wavetable #'cl-collider:buffer-read-as-wavetable #'cl-collider:buffer-read)
          file
          (append (when id
                    (list :bufnum id))

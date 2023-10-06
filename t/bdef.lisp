@@ -15,4 +15,7 @@
   ;;   )
   )
 
-
+(test wavetable
+  "Test wavetable functionality"
+  ;; FIX
+  )

@@ -101,14 +101,15 @@ See also: `splits-events'" ; FIX
 See also: `splits-event', `bdef-splits'"
   (unless (eql unit :percents) ; FIX: implement it
     (error "~S's ~S argument is not yet implemented" 'splits-events 'unit))
-  (let ((beat 0))
-    (loop :for idx :below (splits-length splits)
-          :for ev := (splits-event splits idx)
-          :for r-ev := (cl-patterns:combine-events ev (cl-patterns:event :beat beat))
-          :do (dolist (remove-key (append (set-difference (keys r-ev) keys) remove-keys))
-                (cl-patterns:remove-event-value r-ev remove-key))
-          :collect r-ev
-          :do (incf beat (cl-patterns:event-value ev :delta)))))
+  (loop :with remove-keys := (ensure-list remove-keys)
+        :with beat := 0
+        :for idx :below (splits-length splits)
+        :for ev := (splits-event splits idx)
+        :for r-ev := (cl-patterns:combine-events ev (cl-patterns:event :beat beat))
+        :do (dolist (remove-key (append (set-difference (keys r-ev) keys) remove-keys))
+              (cl-patterns:remove-event-value r-ev remove-key))
+        :collect r-ev
+        :do (incf beat (cl-patterns:event-value ev :delta))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (export '(splits-event splits-events)))
