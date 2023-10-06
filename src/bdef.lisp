@@ -226,7 +226,7 @@ Note that this function will block if the specified metadata is one of the `*bde
 
 Without VALUE, bdef will look up and return the bdef that already exists with the given name. If NAME is a pathname or string, it's assumed to be the name of a file, which is automatically loaded if necessary."
   (check-type name (or bdef pathname (and string-designator (not null))))
-  (assert (not (equal name value)) (name value) "Cannot set a bdef to itself.")
+  (check-type value (not bdef))
   (let ((name (if (pathname-designator-p name)
                   (ensure-namestring name)
                   name)))
