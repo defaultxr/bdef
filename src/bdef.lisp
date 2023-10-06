@@ -3,6 +3,7 @@
 ;; FIX: also ensure a sound can be loaded multiple times with different number of channels
 ;; FIX: make all methods like `splits-bdef', `bdef-buffer', `bdef-sample-rate', etc take an errorp argument to determine whether to error if the data is not available
 ;; FIX: auto-metadata should just become an interface over a more general hook mechanism
+;; FIX: doesn't detect if SC is still running. if it's no longer running, `bdef' seems to just hang...
 
 (in-package #:bdef)
 
@@ -223,7 +224,6 @@ Note that this function will block if the specified metadata is one of the `*bde
       (dolist (key meta-keys)
         (format stream "    ~S -> ~S~%" key (bdef-metadata bdef key))))))
 
-;; FIX: add 'metadata' key. it should probably add to the default metadata fields. if the user doesn't want them, they can provide 'nil' for the key they don't want generated.
 (defun bdef (name &optional (value nil value-provided-p) &key (num-channels 2) wavetable metadata backend (dictionary *bdef-dictionary*))
   "Automatically load a buffer or reference one that's already loaded. NAME is the name to give the buffer in the bdef dictionary. VALUE is the path to the file to load, or the data to construct the buffer from (i.e. an envelope, a list of frames, etc).
 

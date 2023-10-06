@@ -263,3 +263,4 @@ For the user's convenience, you might also want to define methods on the ~bdef~ 
 - We have ~bdef-frames~ to get buffer data; we should have support for setting buffer data as well.
 - Support for configurable pathname shortcuts. (i.e. set ~foo~ as a shortcut to ~/a/long/path/name/~, then provide ~"foo/bar.wav"~ instead of ~"/a/long/path/name/bar.wav"~.)
 - "Dynamic" splits; i.e. define a set of splits as "this region in four equal-length pieces" rather than all splits being immediately "baked" as specific points.
+- Allow importing as ~splits~ from ~.srt~ (subtitle) files, ~.tsv~ (tab-separated values; this seems to be what Audacity uses, and Whisper has an option to export in this format), and ~.vtt~ (WebVTT; similar to ~.srt~)?
