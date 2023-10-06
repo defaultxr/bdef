@@ -8,6 +8,9 @@
 
 ;;; global variables/configuration
 
+(defvar *bdef-default-num-channels* nil
+  "The default value of `bdef-load''s NUM-CHANNELS argument. If 2, all buffers will default to being loaded as stereo even if they are mono. If nil, load all the channels the source has.")
+
 (defvar *bdef-temporary-directory*
   (merge-pathnames "bdef/" (uiop:temporary-directory))
   "The directory bdef should store its temporary files in (i.e. the .wav files generated from format auto-conversion).")
@@ -365,23 +368,23 @@ See also: `bdef-splits', `splits-events'"
   (:documentation "Load a file or other object into a bdef. Different backends will support different object types, and different key arguments. Here are the key arguments supported by one or more backends:
 
 - ID - Requested buffer number.
-- NUM-CHANNELS - Number of channels to load (defaults to 2).
+- NUM-CHANNELS - Number of channels to load (defaults to `*bdef-default-num-channels*', which itself defaults to nil, meaning load the same number of channels as the source).
 - WAVETABLE - Whether to load the object in wavetable format. If T, the buffer length will be the next power of two. If a number is provided, load the object as a wavetable of that size.
 - METADATA - Plist of metadata to include in the bdef."))
 
-(defmethod bdef-load ((file string) &rest args &key backend (num-channels 2) (wavetable nil) id metadata)
-  (declare (ignorable id wavetable))
+(defmethod bdef-load ((file string) &rest args &key backend (num-channels *bdef-default-num-channels* num-channels-provided-p) wavetable metadata &allow-other-keys)
+  (when (and wavetable num-channels-provided-p)
+    (warn "Multi-channel wavetables are not supported; resulting buffer will be one channel."))
   (let ((original-file (ensure-namestring file))
         (backend (or backend
                      (car *bdef-backends*)
                      (error "No bdef backends are currently enabled. Enable one by loading its subsystem.")))
-        (num-channels (or num-channels
-                          (if wavetable 1 2))))
+        (num-channels (if wavetable 1 num-channels)))
     (unless (file-exists-p original-file)
       (error 'file-does-not-exist :pathname original-file))
     (multiple-value-bind (file file-metadata)
         (ensure-readable-audio-file original-file :num-channels num-channels :backend backend)
-      (let* ((buffer (apply #'bdef-backend-load backend file :num-channels num-channels args))
+      (let* ((buffer (apply #'bdef-backend-load backend file :num-channels num-channels (remove-from-plist args :num-channels)))
              (bdef (make-instance 'bdef
                                   :name file
                                   :buffer buffer)))
