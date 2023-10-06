@@ -219,8 +219,8 @@ Note that this function will block if the specified metadata is one of the `*bde
     (format stream "~S is a ~S.~%  It is ~S frames long (~S seconds), with ~S channels.~%" bdef 'bdef (bdef-length bdef) (bdef-duration bdef) (bdef-channels bdef))
     (format stream "~@[  It contains the audio from the file ~S.~%~]" (bdef-file bdef))
     (format stream "  Names that point to this buffer are: ~S~%" (bdef-names bdef))
-    (when-let ((meta-keys (keys (bdef-metadata bdef))))
-      (format stream "  It has the following metadata:~%")
+    (let ((meta-keys (keys (bdef-metadata bdef))))
+      (format stream "  It has ~S metadat~1:*~[a.~;um:~:;a:~]~%" (length meta-keys))
       (dolist (key meta-keys)
         (format stream "    ~S -> ~S~%" key (bdef-metadata bdef key))))))
 
