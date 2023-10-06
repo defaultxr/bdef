@@ -364,10 +364,10 @@ See also: `bdef-splits', `splits-events'"
 (defgeneric bdef-load (object &key)
   (:documentation "Load a file or other object into a bdef. Different backends will support different object types, and different key arguments. Here are the key arguments supported by one or more backends:
 
-- id - Requested buffer ID number.
-- num-channels - Number of channels to load (defaults to 2).
-- wavetable - Whether to load the object in wavetable format. If T, the buffer length will be the next power of two. If a number is provided, load the object as a wavetable of that size.
-- metadata - Plist of metadata to include in the bdef."))
+- ID - Requested buffer number.
+- NUM-CHANNELS - Number of channels to load (defaults to 2).
+- WAVETABLE - Whether to load the object in wavetable format. If T, the buffer length will be the next power of two. If a number is provided, load the object as a wavetable of that size.
+- METADATA - Plist of metadata to include in the bdef."))
 
 (defmethod bdef-load ((file string) &rest args &key backend (num-channels 2) (wavetable nil) id metadata)
   (declare (ignorable id wavetable))
