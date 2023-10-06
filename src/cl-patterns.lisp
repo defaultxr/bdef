@@ -25,7 +25,7 @@
                     args)))
 
 (defmethod render ((pattern pattern) (output (eql :bdef)) &rest args &key &allow-other-keys)
-  (apply #'render (as-score pattern) :bdef args))
+  (apply #'render (as-supercollider-score pattern) :bdef args)) ; FIX: this should probably just call another `render' rather than `as-supercollider-score'
 
 (defmethod render ((bdef bdef:bdef) output &rest args &key &allow-other-keys)
   (apply #'render (bdef:bdef-buffer bdef) output args))
