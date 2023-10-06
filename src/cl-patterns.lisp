@@ -18,6 +18,9 @@
 (defmethod dur ((bdef bdef:bdef))
   (bdef:bdef-dur bdef))
 
+(defmethod duration ((bdef bdef:bdef))
+  (bdef:bdef-duration bdef))
+
 ;; FIX: these methods might not work for non-SC backends??
 (defmethod render ((list list) (output (eql :bdef)) &rest args &key &allow-other-keys)
   (bdef:bdef (apply #'render list (generate-temporary-file-name :directory bdef:*bdef-temporary-directory*
