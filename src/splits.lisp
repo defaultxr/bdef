@@ -244,6 +244,30 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 
 ;;; splits import/export
 
+(defun splits-import (source &optional format)
+  "Derive a `splits' object from another format. If FORMAT is not provided, attempt to autodetect.
+
+See also: `splits-export'"
+  (splits-import-format source (or format
+                                   (let ((detected (splits-import-detect-format source)))
+                                     (unless detected
+                                       (error "Could not detect a suitable import format for ~S." source))
+                                     (if (length= 1 detected)
+                                         (car detected)
+                                         (error "Detected multiple possible import formats for ~S: ~S." source detected))))))
+
+(defvar *splits-format-auto-detect-functions* nil
+  "List of functions to check objects against when imported via `splits-import' without its format specified.")
+
+(defun splits-import-detect-format (source)
+  "Auto-detect the format of SOURCE by testing it through `*splits-format-auto-detect-functions*'. Returns a list of the possible formats detected."
+  (remove nil (mapcar (fn (funcall _ source)) *splits-format-auto-detect-functions*)))
+
+(defgeneric splits-import-format (input format)
+  (:documentation "Make a `splits' object by importing from INPUT in FORMAT.
+
+See also: `splits-import', `splits-export'"))
+
 (defgeneric splits-export (splits destination format)
   (:documentation "Write a `splits' object as another format.
 
@@ -354,16 +378,43 @@ See also: `splits', `aubio-onsets'"
 
 ;; audacity labels
 
-(defun splits-from-audacity-labels (file)
-  "Make a `splits' from an Audacity labels file."
-  (with-open-file (stream file :direction :input :if-does-not-exist :error)
-    (loop :for line := (read-line stream nil)
-          :while line
-          :for parsed := (string-split line :char-bag (list #\tab))
-          :collect (parse-float:parse-float (car parsed)) :into starts
-          :collect (parse-float:parse-float (cadr parsed)) :into ends
-          :collect (caddr parsed) :into comments
-          :finally (return (make-splits starts :ends ends :comments comments :unit :seconds)))))
+(defun detect-audacity-labels (file)
+  "Returns :audacity if FILE is a valid Audacity labels file."
+  (check-type file (or pathname-designator stream))
+  (when (pathname-designator-p file)
+    (with-open-file (stream (ensure-namestring file) :direction :input :if-does-not-exist :error)
+      (return-from detect-audacity-labels (detect-audacity-labels stream))))
+  (loop :for line := (read-line file nil)
+        :while line
+        :for split := (string-split line :count 3 :char-bag (list #\tab))
+        :if (and (not (emptyp line))
+                 (or (not (length= 3 split))
+                     (position-if-not (fn (ignore-errors (parse-float:parse-float _)))
+                                      (subseq split 0 2))))
+          :do (return nil)
+        :finally (return :audacity)))
+
+(pushnew 'detect-audacity-labels *splits-format-auto-detect-functions*)
+
+(defmethod splits-import-format ((path string) (format (eql :audacity)))
+  (with-open-file (stream (ensure-namestring path) :direction :input :if-does-not-exist :error)
+    (splits-import-format stream :audacity)))
+
+(defmethod splits-import-format ((stream stream) (format (eql :audacity)))
+  (loop :for line := (read-line stream nil)
+        :while line
+        :for parsed := (string-split line :char-bag (list #\tab))
+        :collect (parse-float:parse-float (car parsed)) :into starts
+        :collect (parse-float:parse-float (cadr parsed)) :into ends
+        :collect (caddr parsed) :into comments
+        :finally (return (make-splits starts :ends ends :comments comments :unit :seconds))))
+
+(uiop:with-deprecation (:style-warning)
+  (defun splits-from-audacity-labels (file)
+    "Deprecated alias for (splits-import-format FILE :audacity).
+
+See also: `splits-import', `splits-import-format'."
+    (splits-import-format file :audacity)))
 
 (defmethod splits-export ((splits splits) (stream stream) (format (eql :audacity)))
   (loop :for idx :from 0 :below (length splits)

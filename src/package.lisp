@@ -61,12 +61,15 @@
    #:splits-length
    #:splits-points
    #:splits-point
+
+   #:splits-import
+   #:splits-import-format
    #:splits-export
 
    #:splits-from-aubio
    #:splits-from-aubio-onsets
 
-   #:splits-from-audacity-labels
-   #:audacity-labels-from-splits
+   #:splits-from-audacity-labels ; deprecated
+   #:audacity-labels-from-splits ; deprecated
 
    #:splits-from-op-1-drumset))
