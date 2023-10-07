@@ -206,7 +206,7 @@ Note that this function will block if the specified metadata is one of the `*bde
      (buffer :initarg :buffer :reader bdef-buffer :documentation "The actual buffer object that the bdef refers to.")
      (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the bdef, accessible with the `bdef-metadata' function."))))
 
-(define-dictionary bdef :name-type string-designator)
+(define-dictionary bdef :name-type string-designator :define-class-functions t)
 
 (defmethod print-object ((bdef bdef) stream)
   (with-slots (name buffer) bdef
