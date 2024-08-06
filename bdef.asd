@@ -74,6 +74,4 @@
                (:file "splits")
                (:file "cl-patterns"))
   :perform (test-op (op c)
-                    (uiop:symbol-call :fiveam :run!
-                                      (uiop:find-symbol* '#:bdef-tests
-                                                         :bdef/tests))))
+                    (uiop:symbol-call :fiveam :run! (uiop:find-symbol* '#:bdef-tests :bdef/tests))))

@@ -15,5 +15,5 @@
   "Check for any undocumented exported symbols"
   (let ((undocumented (package-undocumented-symbols :bdef)))
     (is-false undocumented
-              "some exported symbols do not have docstrings: ~S"
+              "Some exported symbols do not have docstrings: ~S"
               undocumented)))

@@ -124,23 +124,21 @@ See also: `splits-event', `bdef-splits'"
    (split :initform nil))
   :documentation "Yields events for split information based on the buffer of the current `*event*'."
   :defun (defun psplits (&optional splits split &key unit)
-           (make-instance 'psplits
-                          :splits splits
-                          :split split)))
+           (make-instance 'psplits :splits splits
+                                   :split split)))
 
 ;; FIX: define behaviors for when the selected split is out of range (error, clip, wrap, fold, etc)
 (defmethod as-pstream ((psplits psplits))
   (with-slots (splits split) psplits
-    (make-instance 'psplits-pstream
-                   :splits (pattern-as-pstream splits)
-                   :split (pattern-as-pstream split))))
+    (make-instance 'psplits-pstream :splits (pattern-as-pstream splits)
+                                    :split (pattern-as-pstream split))))
 
 (defmethod next ((psplits psplits-pstream)) ; FIX: implement UNIT
   (with-slots (splits split) psplits
     (let ((splits (if splits
                       (next splits)
-                      (or (e :splits)
-                          (let ((buffer (or (e :buffer) (e :bufnum))))
+                      (or (event-value *event* :splits)
+                          (let ((buffer (or (event-value *event* :buffer) (event-value *event* :bufnum))))
                             (typecase buffer
                               (null eop)
                               (bdef:bdef (bdef:bdef-splits buffer))
@@ -148,7 +146,7 @@ See also: `splits-event', `bdef-splits'"
                               (t eop))))))
           (split (if split
                      (next split)
-                     (e :split))))
+                     (event-value *event* :split))))
       (when (or (eop-p splits)
                 (eop-p split))
         (return-from next eop))

@@ -17,5 +17,10 @@
 
 (test wavetable
   "Test wavetable functionality"
-  ;; FIX
+  ;; FIX: add wavetable tests
+  ;; - wavetable from file
+  ;; - wavetable from envelope
+  ;; - :wavetable arg on already-loaded file
+  ;; - wavetable from envelope with name, i.e. (bdef :foo (env ...))
+  ;; - wavetable from envelope without name, i.e. (bdef (env ...)))
   )

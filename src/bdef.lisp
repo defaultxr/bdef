@@ -212,7 +212,7 @@ Note that this function will block if the specified metadata is one of the `*bde
   (with-slots (name buffer) bdef
     (if (slot-boundp bdef 'name)
         (format stream "(~S ~S)" 'bdef name)
-        (format stream "#<~S>" 'bdef))))
+        (print-unreadable-object (bdef stream :type t)))))
 
 (defmethod describe-object ((bdef bdef) stream)
   (with-slots (name buffer metadata) bdef
@@ -234,11 +234,10 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
                   (ensure-namestring name)
                   name)))
     (unless value-provided-p ; FIX: read the file if only a filename is provided and it hasn't been read yet
-      (return-from bdef (if-let ((bdef (find-bdef name :errorp nil :dictionary dictionary)))
-                          bdef
-                          (if (stringp name)
-                              (bdef name name)
-                              (find-bdef name :dictionary dictionary)))))
+      (return-from bdef (or (find-bdef name :errorp nil :dictionary dictionary)
+                            (if (stringp name)
+                                (bdef name name)
+                                (find-bdef name :dictionary dictionary)))))
     (setf (find-bdef name) (etypecase value
                              (symbol (ensure-namestring value))
                              (bdef value)
@@ -302,18 +301,16 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
   nil)
 
 (defmethod bdef-metadata ((bdef bdef) &optional key)
-  (if key
-      (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
-        (funcall (cadr dyn-meta) bdef)
-        (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
-          (values
-           (if val
-               (if (typep val 'eager-future2:future)
-                   (setf (bdef-metadata bdef key) (eager-future2:yield val))
-                   val)
-               val)
-           present-p)))
-      (slot-value bdef 'metadata)))
+  (unless key
+    (return-from bdef-metadata (slot-value bdef 'metadata)))
+  (if-let ((dyn-meta (assoc key *bdef-dynamic-metadata*)))
+    (funcall (second dyn-meta) bdef)
+    (multiple-value-bind (val present-p) (gethash key (slot-value bdef 'metadata))
+      (values (when val
+                (if (typep val 'eager-future2:future)
+                    (setf (bdef-metadata bdef key) (eager-future2:yield val))
+                    val))
+              present-p))))
 
 (defmethod (setf bdef-metadata) (value (symbol symbol) &optional key)
   (setf (bdef-metadata (find-bdef symbol) key) value))

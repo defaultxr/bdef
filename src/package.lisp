@@ -8,7 +8,7 @@
   (:export
 
    ;;; bdef.lisp
-   
+
    #:*bdef-default-num-channels*
    #:*bdef-temporary-directory*
    #:*bdef-backends*

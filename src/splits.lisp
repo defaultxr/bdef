@@ -70,7 +70,7 @@ Examples:
 ;; (make-splits (list 0 1) :ends (list 1 2) :comments (list \"first split\" \"second split\") :unit :seconds)
 
 See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loops', `splits-comments'"
-  (assert (typep bdef '(or null bdef)))
+  (check-type bdef (or null bdef))
   (let* ((listp (listp (elt starts 0)))
          (comments (or comments (and listp
                                      (mapcar (lambda (item)
@@ -144,8 +144,8 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 
 (defun splits-points (splits &optional (point :start) (unit :percents))
   "Get the split points for POINTS (i.e. start, end, loops, comments) from SPLITS converted to UNIT (i.e. percent, samples, seconds)."
-  (assert (typep splits 'splits) (splits))
-  (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
+  (check-type splits splits)
+  (check-type point (member :start :end :loop :comment :starts :ends :loops :comments))
   (let ((array (slot-value splits (%splits-ensure-point-type point)))
         (conv-func (%splits-conversion-function splits (%splits-ensure-unit unit))))
     (if (or (null array)
@@ -169,8 +169,8 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 
 (defun splits-point (splits split &optional (point :start) (unit :percents))
   "Get the split point SPLIT from SPLITS, converting to the correct UNIT (percent, samples, seconds)."
-  (assert (integerp split) (split))
-  (assert (member point (list :start :end :loop :comment :starts :ends :loops :comments)) (point))
+  (check-type split integer)
+  (check-type point (member :start :end :loop :comment :starts :ends :loops :comments))
   (let* ((splits (if (typep splits '(or bdef symbol))
                      (bdef-splits splits)
                      splits))
@@ -203,17 +203,16 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
 
 (defmethod (setf splits-metadata) (value (splits splits) &optional key)
   (with-slots (metadata) splits
-    (if key
-        (progn
-          (when (typep value 'bdef)
-            (unless (bdef-splits value)
-              (setf (bdef-splits value) splits))
-            (unless (slot-boundp splits 'bdef)
-              (setf (splits-bdef splits) value)))
-          (setf (gethash key metadata) value))
-        (setf metadata (etypecase value
-                         (list (plist-hash-table value))
-                         (hash-table value))))))
+    (unless key
+      (return-from splits-metadata (setf metadata (etypecase value
+                                                    (list (plist-hash-table value))
+                                                    (hash-table value)))))
+    (when (typep value 'bdef)
+      (unless (bdef-splits value)
+        (setf (bdef-splits value) splits))
+      (unless (slot-boundp splits 'bdef)
+        (setf (splits-bdef splits) value)))
+    (setf (gethash key metadata) value)))
 
 (defmethod bdef-buffer ((this splits))
   (bdef-buffer (splits-bdef this)))
@@ -349,7 +348,7 @@ See also: `splits', `aubio-onsets'"
 
 (defun aubio-demo-bpm (file &key (mode :default))
   "Use aubio's demo_bpm_extract.py to get the bpm of FILE."
-  (assert (member mode '(:default :fast :super-fast)) (mode))
+  (check-type mode (member :default :fast :super-fast))
   (let* ((file (ensure-readable-audio-file (bdef-file file)))
          (string (uiop:run-program (list "python" (ensure-namestring (merge-pathnames *aubio-python-directory* "demo_bpm_extract.py")) "-m" (string-downcase mode) (ensure-namestring file))
                                    :output '(:string :stripped t))))
@@ -370,6 +369,10 @@ See also: `splits', `aubio-onsets'"
                                        :output '(:string :stripped t)))))))
 
 ;; bpm-tools
+;; https://www.pogo.org.uk/~mark/bpm-tools/
+;; FIX: check if "bpm" actually exists
+;; FIX: remove use of "sox"?
+;; FIX: don't use :force-shell t
 
 (defun bpm-tools-bpm (file)
   "Use bpm-tools' \"bpm\" utility to get the BPM of FILE."
@@ -465,12 +468,12 @@ See also: `op-1-format-to-frame'"
               (cond ((null if-invalid)
                      (return-from splits-from-op-1-drumset nil))
                     ((eql :error if-invalid)
-                     (error "Could not parse ~s as an op-1 drumset." drumset)))))
+                     (error "Could not parse ~S as an op-1 drumset." drumset)))))
        (with-open-file (stream drumset :direction :input :element-type '(unsigned-byte 8) :if-does-not-exist :error)
          (loop :for peek := (read-byte stream nil nil)
-               :if (null peek)
+               :unless peek
                  :do (not-valid)
-               :if (= peek 111) ; #\o
+               :when (= peek 111) ; #\o
                  :do (let ((array (make-array 3 :initial-element nil)))
                        (read-sequence array stream)
                        (when (equalp #(112 45 49) array) ; #\p #\- #\1

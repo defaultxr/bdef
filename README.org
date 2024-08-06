@@ -264,3 +264,9 @@ For the user's convenience, you might also want to define methods on the ~bdef~ 
 - Support for configurable pathname shortcuts. (i.e. set ~foo~ as a shortcut to ~/a/long/path/name/~, then provide ~"foo/bar.wav"~ instead of ~"/a/long/path/name/bar.wav"~.)
 - "Dynamic" splits; i.e. define a set of splits as "this region in four equal-length pieces" rather than all splits being immediately "baked" as specific points.
 - Allow importing as ~splits~ from ~.srt~ (subtitle) files, ~.tsv~ (tab-separated values; this seems to be what Audacity uses, and Whisper has an option to export in this format), and ~.vtt~ (WebVTT; similar to ~.srt~)?
+- Auto-generate metadata with [[https://librosa.org/][librosa]] ([[https://github.com/librosa/librosa/][github]]) similar to how we do for Aubio.
+  https://librosa.org/doc/latest/index.html
+  https://librosa.org/doc/latest/tutorial.html
+- Rename the ~:cl-collider~ backend to ~:supercollider~ for consistency with cl-patterns.
+- Allow allocating an empty buffer by specifying the number of frames as the value.
+- Rename ~bdef-frames~ to ~bdef-data~ ? This is what Incudine calls it (~buffer-data~) and it's less ambiguous whether "frames" refers to the contents of the frames, or to the number of frames.
