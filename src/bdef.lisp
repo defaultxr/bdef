@@ -278,6 +278,24 @@ Without VALUE, bdef will look up and return the bdef that already exists with th
     "Deprecated alias for `(setf bdef-name)'."
     (setf (bdef-name object) value)))
 
+(defmethod (setf bdef-name) (value (name symbol))
+  (setf (bdef-name (find-bdef name)) value))
+
+(defmethod (setf bdef-name) (value (name string))
+  (setf (bdef-name (find-bdef name)) value))
+
+(defmethod (setf bdef-name) (new-name (bdef bdef)) ; FIX: add tests for this
+  (loop :with old-name := (bdef-name bdef)
+        :with dict := *bdef-dictionary*
+        :for key :being :the :hash-keys :of dict
+        :for value := (gethash key dict)
+        :when (equal value old-name)
+          :do (setf (gethash key dict) new-name)
+        :when (equal key old-name)
+          :do (let ((old-value value))
+                (remhash key dict)
+                (setf (gethash new-name dict) old-value))
+        :finally (setf (slot-value bdef 'name) new-name)))
 
 (defmethod bdef-id ((name symbol))
   (bdef-id (bdef-buffer (find-bdef name))))
