@@ -38,16 +38,19 @@
 (in-package #:bdef)
 
 (defun splits-event (splits split &key end-split (unit :percents))
-  "Get an `event' for a `splits' split. The event will always have at least a start key, but will also have:
+  "Get a `cl-patterns:event' for a `splits' split. The resulting event will always have at least a :start key, but may also have:
 
-- end key if END-SPLIT is provided or derivable (`derive-split-end')
-- dur key if
+- :end - if END-SPLIT is provided or can be derived (`derive-split-end')
+- :dur - if the dur can be derived (`derive-split-dur')
 
-See also: `splits-events'" ; FIX
+See also: `splits-events'"
   (let* ((start (splits-point splits split :start unit))
          (end-split (or end-split split))
          (end (derive-split-end splits end-split :unit unit :if-uncomputable nil))
-         (tempo (or (cl-patterns:e :tempo) (cl-patterns:tempo cl-patterns:*clock*))) ; FIX: check bdef's tempo instead?
+         (bdef (splits-bdef splits))
+         (tempo (or (and bdef (bdef-metadata bdef :tempo))
+                    (cl-patterns:event-value cl-patterns:*event* :tempo)
+                    (cl-patterns:tempo cl-patterns:*clock*)))
          (dur (derive-split-dur splits split :end-split end-split :tempo tempo :if-uncomputable nil)))
     (apply #'cl-patterns:event
            :start start
