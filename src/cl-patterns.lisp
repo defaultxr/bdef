@@ -37,48 +37,6 @@
 
 (in-package #:bdef)
 
-(defun derive-split-end (splits split &key (unit :percents) (if-uncomputable :error)) ; FIX: move outside of cl-patterns.lisp
-  "Derive the end point of SPLIT in SPLITS for the specified UNIT. If the end point can't be derived, error if IF-COMPUTABLE is :error, or just return nil if it is nil.
-
-If SPLITS does not have end points, we derive the end point by assuming the end of one split is the start of the next. However, we can only do this for any split and any unit if we know the source buffer's length & rate. This is because the last split has no split after it to check the start of.
-
-See also: `derive-split-dur', `splits-point'"
-  (let ((splits (if (typep splits '(or bdef symbol))
-                    (bdef-splits splits)
-                    splits))
-        (unit (%splits-ensure-unit unit))
-        (last-p (= split (1- (splits-length splits)))))
-    (or (when (and (eql unit 'percents)
-                   last-p)
-          1)
-        (when (splits-ends splits)
-          (splits-point splits split :end unit))
-        (when (or (and (splits-bdef splits)
-                       (bdef-length splits)
-                       (bdef-sample-rate splits))
-                  (eql unit 'percents))
-          (if last-p
-              (end-point splits unit)
-              (splits-point splits (1+ split) :start unit)))
-        (when (eql :error if-uncomputable)
-          (error "Could not derive the end of split ~S for ~S" split splits)))))
-
-(defun derive-split-duration (splits start-split &key end-split (if-uncomputable :error)) ; FIX: move outside of cl-patterns.lisp
-  "Derive the duration in seconds of the start of START-SPLIT to the end of END-SPLIT. If the duration can't be derived, error if IF-COMPUTABLE is :error, or just return nil if it is nil. If END-SPLIT is nil or not provided, ; FIX
-
-See also: `derive-split-dur', `derive-split-end', `splits-point'"
-  (let ((end (derive-split-end splits (or end-split start-split) :unit :seconds :if-uncomputable if-uncomputable))
-        (start (splits-point splits start-split :start :seconds)))
-    (abs (- end start))))
-
-(defun derive-split-dur (splits start-split &key end-split (tempo 1) (if-uncomputable :error))
-  "Derive the duration in beats of the start of START-SPLIT to the end of END-SPLIT. If the dur can't be derived, error if IF-COMPUTABLE is :error, or just return nil if it is nil. If ; FIX
-
-See also: `derive-split-duration', `derive-split-end', `splits-point'"
-  (cl-patterns:time-dur
-   (derive-split-duration splits start-split :end-split end-split :if-uncomputable if-uncomputable)
-   tempo))
-
 (defun splits-event (splits split &key end-split (unit :percents))
   "Get an `event' for a `splits' split. The event will always have at least a start key, but will also have:
 

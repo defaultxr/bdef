@@ -192,6 +192,61 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
        ((:sample :frame :samples :frames) (bdef-length object))
        ((:second :seconds) (bdef-duration object))))))
 
+(defun derive-split-end (splits split &key (unit :percents) (if-uncomputable :error))
+  "Derive the end point of SPLIT in SPLITS for the specified UNIT. IF-COMPUTABLE defines what should be done if the split's end can't be derived; it can be one of these options:
+
+- :error - Signal an error.
+- :next-start - Return the next split's start point. Note that this might also end up signalling an error.
+- nil - Return nil.
+
+If SPLITS does not have end points, we derive the end point by assuming the end of one split is the start of the next. However, we can only do this for any split and any unit if we know the source buffer's length & rate. This is because the last split has no split after it to check the start of.
+
+See also: `derive-split-dur', `splits-point'"
+  (let ((splits (if (typep splits '(or bdef symbol))
+                    (bdef-splits splits)
+                    splits))
+        (unit (%splits-ensure-unit unit))
+        (last-p (= split (1- (splits-length splits)))))
+    (or (when (and (eql unit 'percents)
+                   last-p)
+          1)
+        (when (and (splits-ends splits)
+                   (eql unit (splits-unit splits)))
+          (splits-point splits split :end unit))
+        (when (or (and (splits-bdef splits)
+                       (bdef-length splits)
+                       (bdef-sample-rate splits))
+                  (eql unit 'percents))
+          (if last-p
+              (end-point splits unit)
+              (splits-point splits (1+ split) :start unit)))
+        (when if-uncomputable
+          (ecase if-uncomputable
+            (:error (error "Could not derive the end of split ~S for ~S" split splits))
+            (:next-start (splits-point splits (1+ split) :start unit)))))))
+
+(defun derive-split-duration (splits start-split &key (end-split start-split) (if-uncomputable :error))
+  "Derive the duration (in seconds) of the start of START-SPLIT to the end of END-SPLIT. If the duration can't be derived, error if IF-COMPUTABLE is :error, or just return nil if it is nil.
+
+See also: `derive-split-dur', `derive-split-end', `splits-point'"
+  (let ((end (derive-split-end splits end-split :unit :seconds :if-uncomputable if-uncomputable))
+        (start (ignore-errors (splits-point splits start-split :start :seconds))))
+    (when (and end start)
+      (return-from derive-split-duration (abs (- end start))))
+    (when if-uncomputable
+      (ecase if-uncomputable
+        (:error (error "Could not derive the duration of splits ~S..~S for ~S" start-split end-split splits))))))
+
+(defun derive-split-dur (splits start-split &key (end-split start-split) (tempo 1) (if-uncomputable :error))
+  "Derive the dur (in beats) of the start of START-SPLIT to the end of END-SPLIT. If the dur can't be derived, error if IF-COMPUTABLE is :error, or just return nil if it is nil.
+
+See also: `derive-split-duration', `derive-split-end', `splits-point'"
+  (if-let ((duration (derive-split-duration splits start-split :end-split end-split :if-uncomputable if-uncomputable)))
+    (* duration tempo)
+    (when if-uncomputable
+      (ecase if-uncomputable
+        (:error (error "Could not derive the dur of splits ~S..~S for ~S" start-split end-split splits))))))
+
 (defgeneric splits-metadata (splits &optional key)
   (:documentation "Get the value of SPLITS's metadata for KEY, or the full metadata hashtable if KEY is not provided. Returns true as a second value if the metadata had an entry for KEY, or false if it did not."))
 
