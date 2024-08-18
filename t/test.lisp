@@ -2,6 +2,7 @@
   (:use #:cl
         #:bdef
         #:mutility
+        #:cl-patterns
         #:fiveam))
 
 (in-package #:bdef/tests)
