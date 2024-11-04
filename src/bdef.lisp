@@ -186,14 +186,8 @@ See also: `define-bdef-auto-metadata', `bdef-metadata'"
 
 ;;; bdef
 
-(defgeneric bdef-name (bdef)
-  (:documentation "The name (key) of the bdef."))
-
 (defgeneric bdef-id (bdef)
   (:documentation "The ID number of this bdef, or nil if the bdef's backend does not support IDs."))
-
-(defgeneric bdef-buffer (object)
-  (:documentation "The actual buffer object that the bdef refers to."))
 
 (defgeneric bdef-metadata (bdef &optional key)
   (:documentation "Get the value of BDEF's metadata for KEY, or the full metadata hashtable if KEY is not provided. Returns true as a second value if the metadata had an entry for KEY, or false if it did not.
@@ -205,6 +199,12 @@ Note that this function will block if the specified metadata is one of the `*bde
     ((name :initarg :name :reader bdef-name :type string-designator :documentation "The name (key) of the bdef.")
      (buffer :initarg :buffer :reader bdef-buffer :documentation "The actual buffer object that the bdef refers to.")
      (metadata :initarg :metadata :initform (make-hash-table) :type hash-table :documentation "Hash table of additional data associated with the bdef, accessible with the `bdef-metadata' function."))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute) ; needed for the following dolist form.
+  (closer-mop:ensure-finalized (find-class 'bdef)))
+
+(dolist (sym (list 'bdef-name 'bdef-buffer))
+  (setf (documentation sym 'function) (documentation (find-class-slot 'bdef :accessor sym) t)))
 
 (define-dictionary bdef :name-type string-designator :define-class-functions t)
 

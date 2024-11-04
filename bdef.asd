@@ -13,6 +13,7 @@
   :depends-on (#:alexandria
                #:mutility
                #:parse-float
+               #:closer-mop
                #:jsown
                #:eager-future2)
   :pathname "src/"
