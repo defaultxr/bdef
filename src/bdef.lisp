@@ -224,7 +224,7 @@ Note that this function will block if the specified metadata is one of the `*bde
       (dolist (key meta-keys)
         (format stream "    ~S -> ~S~%" key (bdef-metadata bdef key))))))
 
-(defun bdef (name &optional (value nil value-provided-p) &key (num-channels 2) wavetable metadata backend (dictionary *bdef-dictionary*))
+(defun bdef (name &optional (value nil value-provided-p) &key (num-channels *bdef-default-num-channels*) wavetable metadata backend (dictionary *bdef-dictionary*))
   "Automatically load a buffer or reference one that's already loaded. NAME is the name to give the buffer in the bdef dictionary. VALUE is the path to the file to load, or the data to construct the buffer from (i.e. an envelope, a list of frames, etc).
 
 Without VALUE, bdef will look up and return the bdef that already exists with the given name. If NAME is a pathname or string, it's assumed to be the name of a file, which is automatically loaded if necessary."
