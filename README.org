@@ -119,7 +119,7 @@ It does this by storing them in a temporary directory (~/tmp/bdef/~ by default o
 
 ** Loads mono files as stereo by default.
 
-For consistency. To load as mono, supply 1 for ~bdef~'s ~num-channels~ keyword argument.
+For consistency. To load as mono, supply 1 for ~bdef~'s ~num-channels~ keyword argument. To load buffers as mono by default so you don't need to specify it each time you load a buffer, you can set ~*bdef-default-num-channels*~ to ~1~.
 
 ** Supports loading in wavetable format:
 
