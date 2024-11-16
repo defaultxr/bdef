@@ -92,39 +92,39 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
                    :ends (when ends (coerce ends 'vector))
                    :loops (when loops (coerce loops 'vector))
                    :comments (when comments (coerce comments 'vector))
-                   :unit (%splits-ensure-unit unit)
+                   :unit (splits-ensure-unit unit)
                    :bdef bdef
                    :metadata (etypecase metadata
                                (list (plist-hash-table metadata))
                                (hash-table metadata)))))
 
-(defun %splits-ensure-point-type (point)
+(defun splits-ensure-point-type (point)
   "Ensure POINT is one of the splits point types."
   (ecase (make-keyword point)
-    ((:starts :start) 'starts)
-    ((:ends :end) 'ends)
-    ((:loops :loop) 'loops)
-    ((:comments :comment) 'comments)))
+    ((:starts :start) :starts)
+    ((:ends :end) :ends)
+    ((:loops :loop) :loops)
+    ((:comments :comment) :comments)))
 
-(defun %splits-ensure-unit (unit)
+(defun splits-ensure-unit (unit)
   "Ensure UNIT is one of the splits position unit types."
   (ecase (make-keyword unit)
-    ((:percent :percents) 'percents)
-    ((:sample :samples :frame :frames) 'samples)
-    ((:second :seconds) 'seconds)))
+    ((:percent :percents) :percents)
+    ((:sample :samples :frame :frames) :samples)
+    ((:second :seconds) :seconds)))
 
-(defun %splits-conversion-function-name (splits unit)
+(defun splits-conversion-function-name (splits unit)
   "Get the name of the conversion function to convert SPLITS' unit type into the unit specified."
-  (let ((unit (symbol-name (%splits-ensure-unit unit)))
+  (let ((unit (symbol-name (splits-ensure-unit unit)))
         (unit-slot (symbol-name (slot-value splits 'unit))))
     (if (string= unit unit-slot)
         'identity
         (intern (concat unit-slot "-" unit) 'bdef))))
 
-(defun %splits-conversion-function (splits unit)
+(defun splits-conversion-function (splits unit)
   "Get a function that can be used to convert SPLITS' unit into the unit type specified."
-  (let* ((unit (%splits-ensure-unit unit))
-         (conv-func (%splits-conversion-function-name splits unit)))
+  (let* ((unit (splits-ensure-unit unit))
+         (conv-func (splits-conversion-function-name splits unit)))
     (if (eql 'identity conv-func)
         'identity
         (lambda (x) (funcall conv-func x (case conv-func
@@ -146,8 +146,8 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
   "Get the split points for POINTS (i.e. start, end, loops, comments) from SPLITS converted to UNIT (i.e. percent, samples, seconds)."
   (check-type splits splits)
   (check-type point (member :start :end :loop :comment :starts :ends :loops :comments))
-  (let ((array (slot-value splits (%splits-ensure-point-type point)))
-        (conv-func (%splits-conversion-function splits (%splits-ensure-unit unit))))
+  (let ((array (slot-value splits (intern (symbol-name (splits-ensure-point-type point)) 'bdef)))
+        (conv-func (splits-conversion-function splits (splits-ensure-unit unit))))
     (if (or (null array)
             (eq 'identity conv-func))
         array
@@ -171,14 +171,12 @@ See also: `splits', `splits-points', `splits-starts', `splits-ends', `splits-loo
   "Get the split point SPLIT from SPLITS, converting to the correct UNIT (percent, samples, seconds)."
   (check-type split integer)
   (check-type point (member :start :end :loop :comment :starts :ends :loops :comments))
-  (let* ((splits (if (typep splits '(or bdef symbol))
-                     (bdef-splits splits)
-                     splits))
-         (unit (%splits-ensure-unit unit))
-         (array (slot-value splits (%splits-ensure-point-type point)))
-         (conv-func (%splits-conversion-function splits unit)))
-    (when (null array)
-      (return-from splits-point nil))
+  (when-let* ((splits (if (typep splits '(or bdef symbol))
+                          (bdef-splits splits)
+                          splits))
+              (unit (splits-ensure-unit unit))
+              (array (slot-value splits (intern (symbol-name (splits-ensure-point-type point)) 'bdef)))
+              (conv-func (splits-conversion-function splits unit)))
     (if (eql 'identity conv-func)
         (elt array split)
         (funcall conv-func (elt array split)))))
@@ -205,7 +203,7 @@ See also: `derive-split-dur', `splits-point'"
   (let ((splits (if (typep splits '(or bdef symbol))
                     (bdef-splits splits)
                     splits))
-        (unit (%splits-ensure-unit unit))
+        (unit (splits-ensure-unit unit))
         (last-p (= split (1- (splits-length splits)))))
     (or (when (and (eql unit 'percents)
                    last-p)
