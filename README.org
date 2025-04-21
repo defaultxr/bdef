@@ -4,50 +4,50 @@
 
 Basically, this simplifies buffer management in [[https://github.com/byulparan/cl-collider][cl-collider]], making them easier to use.
 
-*Note:* Previously Bdef for SuperCollider was hosted at this URL. That repository has since moved [[https://github.com/defaultxr/supercollider-bdef][here]].
+*Note:* Previously, Bdef for SuperCollider was hosted at this URL. That repository has since moved [[https://github.com/defaultxr/supercollider-bdef][here]].
 
 * Intro
 
 Bdef is available from Quicklisp, so you can simply Quickload it:
 
 #+BEGIN_SRC lisp
-(ql:quickload :bdef)
+  (ql:quickload :bdef)
 #+END_SRC
 
 It also has multiple sub-systems for integration with various other libraries. So if you use cl-patterns, cl-collider, or Incudine you may want to load ~bdef/cl-patterns~ and/or the other sub-systems:
 
 #+BEGIN_SRC lisp
-;; integration with cl-patterns and cl-collider:
-(ql:quickload '(bdef/cl-patterns bdef/cl-collider))
+  ;; integration with cl-patterns and cl-collider:
+  (ql:quickload '(bdef/cl-patterns bdef/cl-collider))
 #+END_SRC
 
 To load a buffer from a file, provide the path to the ~bdef~ function:
 
 #+BEGIN_SRC lisp
-(bdef "~/path/to/your/buffer.mp3")
+  (bdef "~/path/to/your/buffer.mp3")
 
-;; you can also give it an alias:
-(bdef :foo "/path/to/buffer.wav")
+  ;; you can also give it an alias:
+  (bdef :foo "/path/to/buffer.wav")
 
-;; the buffer can then be referred to with it:
-(bdef :foo)
+  ;; the buffer can then be referred to with it:
+  (bdef :foo)
 #+END_SRC
 
 ~bdef~ returns a bdef object which can be provided in place of a buffer for any functions that expect it, as long as you've quickloaded the proper bdef sub-system for the library those functions are from. For example:
 
 #+BEGIN_SRC lisp
-;; cl-collider:
-(synth :playbuf :buffer (bdef :foo)) ; will work if you've loaded the bdef/cl-collider system.
+  ;; cl-collider:
+  (synth :playbuf :buffer (bdef :foo)) ; will work if you've loaded the bdef/cl-collider system and defined a synth named :playbuf.
 
-;; cl-patterns:
-(play (event :instrument :playbuf :buffer :foo)) ; will work if you've loaded the bdef/cl-patterns system.
-;; Notice that you can just specify the bdef name as a symbol without even having to use the bdef function! The same is true in patterns too.
+  ;; cl-patterns:
+  (play (event :instrument :playbuf :buffer :foo)) ; will work if you've loaded the bdef/cl-patterns system and defined a synth named :playbuf.
+  ;; Notice that you can just specify the bdef name as a symbol without even having to use the bdef function! The same is true in patterns too.
 #+END_SRC
 
 Metadata can be associated with bdefs for various uses:
 
 #+BEGIN_SRC lisp
-(setf (bdef-metadata :foo :bpm) 120) ; set the "bpm" metadatum to 120
+  (setf (bdef-metadata :foo :bpm) 120) ; set the "bpm" metadatum to 120
 #+END_SRC
 
 Some metadata is automatically generated; for example, the tempo may be automatically detected from the filename or id3 tags.
@@ -100,7 +100,7 @@ versus:
 ** Automatically converts files unsupported by the backend if you have ffmpeg installed:
 
 #+BEGIN_SRC lisp
-(bdef :bar "/blah.mp3") ; works!
+  (bdef :bar "/blah.mp3") ; works!
 #+END_SRC
 
 It does this by storing them in a temporary directory (~/tmp/bdef/~ by default on linux and mac).
@@ -108,13 +108,13 @@ It does this by storing them in a temporary directory (~/tmp/bdef/~ by default o
 ** No additional name needed if loading from a file:
 
 #+BEGIN_SRC lisp
-(bdef "/my-file.ogg")
+  (bdef "/my-file.ogg")
 #+END_SRC
 
 ** Supports pathname abbreviations:
 
 #+BEGIN_SRC lisp
-(bdef "~/cool-sound.wav") ; will find a cool sound in your home directory
+  (bdef "~/cool-sound.wav") ; will find a cool sound in your home directory
 #+END_SRC
 
 ** Loads mono files as stereo by default.
@@ -124,7 +124,7 @@ For consistency. To load as mono, supply 1 for ~bdef~'s ~num-channels~ keyword a
 ** Supports loading in wavetable format:
 
 #+BEGIN_SRC lisp
-(bdef "~/wilhelm.wav" :wavetable t) ; load the Wilhelm scream as a wavetable
+  (bdef "~/wilhelm.wav" :wavetable t) ; load the Wilhelm scream as a wavetable
 #+END_SRC
 
 ** Supports loading envelopes as buffers:
@@ -134,9 +134,9 @@ Either as wavetables, or standard.
 ** Integration with [[https://github.com/byulparan/cl-collider][cl-collider]]:
 
 #+BEGIN_SRC lisp
-(cl-collider:bufnum (bdef :sound)) ; returns the buffer number.
+  (cl-collider:bufnum (bdef :sound)) ; returns the buffer number.
 
-(cl-collider:synth :playbuf :bufnum (bdef :sound)) ; plays the buffer.
+  (cl-collider:synth :playbuf :buffer (bdef :sound)) ; when bdef/cl-collider is loaded, bdef objects are automatically coerced to their buffer ID where it is needed.
 #+END_SRC
 
 Load the ~bdef/cl-collider~ system to enable this.
@@ -144,9 +144,9 @@ Load the ~bdef/cl-collider~ system to enable this.
 ** Integration with [[https://github.com/defaultxr/cl-patterns][cl-patterns]]:
 
 #+BEGIN_SRC lisp
-(cl-patterns:play (bdef :sound)) ; plays the buffer using the *cl-collider-buffer-preview-synth* set in cl-patterns.
+  (cl-patterns:play (bdef :sound)) ; plays the buffer using the *cl-collider-buffer-preview-synth* set in cl-patterns.
 
-(cl-patterns:play (cl-patterns:event :instrument :playbuf :bufnum (bdef :sound))) ; automatically converts bdef to the buffer number.
+  (cl-patterns:play (cl-patterns:event :instrument :playbuf :buffer (bdef :sound))) ; when bdef/cl-patterns is loaded, bdef objects are automatically coerced to their buffer ID where it is needed.
 #+END_SRC
 
 Load the ~bdef/cl-patterns~ system to enable this.
@@ -164,19 +164,19 @@ Enable the cl-collider backend, for example, like so:
 ** Allows metadata about the buffer to be stored:
 
 #+BEGIN_SRC lisp
-(setf (bdef-metadata (bdef :snd) :bpm) 99) ; set :snd's tempo to 99 BPM.
+  (setf (bdef-metadata (bdef :snd) :bpm) 99) ; set :snd's tempo to 99 BPM.
 
-(bdef-metadata (bdef :snd) :bpm) ; get the stored bpm value.
+  (bdef-metadata (bdef :snd) :bpm) ; get the stored bpm value.
 #+END_SRC
 
 ** Automatically set various metadata when a bdef is created:
 
 #+BEGIN_SRC lisp
-;; load a file with its bpm in its filename:
-(bdef :my-file "~/my-file-128bpm.wav")
+  ;; load a file with its bpm in its filename:
+  (bdef :my-file "~/my-file-128bpm.wav")
 
-;; the bpm is automatically stored as metadata:
-(bdef-metadata :my-file :bpm) ; => 128
+  ;; the bpm is automatically stored as metadata:
+  (bdef-metadata :my-file :bpm) ; => 128
 #+END_SRC
 
 You can also add your own auto-metadata keys with the ~define-bdef-auto-metadata~ macro or ~set-bdef-auto-metadata~ function, or remove them with the ~remove-bdef-auto-metadata~ function.
@@ -186,13 +186,13 @@ Additional metadata is loaded asynchronously in background threads using futures
 ** Automatically generate metadata from functions:
 
 #+BEGIN_SRC lisp
-(setf (bdef-metadata :foo :bpm) 142) ; sets the "tempo" metadata key instead to its beats per minute value
+  (setf (bdef-metadata :foo :bpm) 142) ; sets the "tempo" metadata key instead to its beats per minute value
 
-;; tempo is stored as beats per second:
-(bdef-metadata :foo :tempo) ; => 71/30 (142 beats per minute in beats per second)
+  ;; tempo is stored as beats per second:
+  (bdef-metadata :foo :tempo) ; => 71/30 (142 beats per minute in beats per second)
 
-;; beats per minute is still available, dynamically calculated from the tempo key:
-(bdef-metadata :foo :bpm) ; => 142
+  ;; beats per minute is still available, dynamically calculated from the tempo key:
+  (bdef-metadata :foo :bpm) ; => 142
 #+END_SRC
 
 You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
@@ -212,10 +212,10 @@ You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 ** Splits integration with cl-patterns:
 
 #+BEGIN_SRC lisp
-  (pbind :instrument :playbuf
-         :bufnum (bdef :my-bdef)
+  (pbind :instrument :playbuf ; if you've defined a synth named :playbuf that accepts the parameters buffer, start, and end.
+         :buffer (bdef :my-bdef)
          :split (pwhite 0 (1- (splits-length :my-bdef))) ; pick a random split
-         :embed (psplits) ; the psplits pattern yields events with :start, :end, and :dur keys to play the split specified by :split from the :splits metadatum of the bdef specified as :bufnum.
+         :embed (psplits) ; the psplits pattern yields events with :start, :end, and :dur keys to play the split specified by :split from the :splits metadatum of the bdef specified as :buffer.
          :dur 1)
 #+END_SRC
 
@@ -232,7 +232,7 @@ You can define your own "dynamic metadata" with ~define-bdef-dynamic-metadata~.
 ** Ability to import splits from OP-1 drumset file metadata:
 
 #+begin_src lisp
-(bdef::splits-from-op-1-drumset "/path/to/op-1-drumset.aif") ; generates a splits by parsing the metadata in the file.
+  (bdef::splits-from-op-1-drumset "/path/to/op-1-drumset.aif") ; generates a splits by parsing the metadata in the file.
 #+end_src
 
 Note that any ~aif~ or ~aiff~ file will automatically be checked for OP-1 metadata, which will be parsed and stored in the ~splits~ bdef metadata key if it is found.
@@ -270,3 +270,5 @@ For the user's convenience, you might also want to define methods on the ~bdef~ 
 - Rename the ~:cl-collider~ backend to ~:supercollider~ for consistency with cl-patterns.
 - Allow allocating an empty buffer by specifying the number of frames as the value.
 - Rename ~bdef-frames~ to ~bdef-data~ ? This is what Incudine calls it (~buffer-data~) and it's less ambiguous whether "frames" refers to the contents of the frames, or to the number of frames.
+- Functionality to load multiple files at once and deal with multiple bdefs at once. i.e. "load all files in this directory, get a list of the resulting bdefs".
+- Synchronous loading, i.e. variant of the ~bdef~ function which only returns once the file is loaded/buffer is ready.
